@@ -10,6 +10,9 @@ class Brain:
         pass
 
     def decide(self) -> Any:
+        if self._mapping is None or not self._mapping:
+            return None
+
         if isinstance(self._mapping, Iterable[Any] & Sized):
             return self._mapping[self._output]
         elif isinstance(self._mapping, dict):

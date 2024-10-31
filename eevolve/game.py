@@ -1,13 +1,15 @@
+import math
 import sys
+from typing import Iterable
 
 import numpy
 import pygame
 
-from typing import Iterable
 from eevolve.agent import Agent
+from eevolve.board import Board
+from eevolve.generator import PositionGenerator
 from eevolve.task import Task, FrameEndTask, CollisionTask, AgentTask, BoardTask
 from eevolve.utils import Utils
-from eevolve.board import Board
 
 
 class Game:
@@ -36,9 +38,10 @@ class Game:
 
         self._background = Utils.load_surface(display_background, display_size)
         self._board = Board(
-            (self.display_size[0] // board_sectors_number,
-             self.display_size[1] // board_sectors_number),
+            (math.ceil(self.display_size[0] / board_sectors_number),
+             math.ceil(self.display_size[1] / board_sectors_number)),
             board_sectors_number)
+        self._sectors_number = board_sectors_number
 
         for agent in self._agents_list:
             self._board.add_agent(agent)
@@ -49,10 +52,9 @@ class Game:
         self.add_task(FrameEndTask(lambda: self._board.check_sector_pairs()))
 
     def draw(self) -> None:
-        self._display.blit(self._background)
-        agents = self._board.agents
+        self._display.blit(self._background, self._TOP_LEFT)
 
-        for agent in agents:
+        for agent in self._board.agents:
             agent.draw(self._display)
 
     def do_tasks(self) -> None:
@@ -101,6 +103,18 @@ class Game:
 
         self._tasks.append(task)
 
+    def add_agents(self, copies_number: int, agent_generator: Iterable[Agent],
+                   position_generator: Iterable[tuple[int | float, int | float] | numpy.ndarray] = None) -> None:
+        if position_generator is None:
+            position_generator = PositionGenerator.uniform(self, copies_number)
+
+        for agent, position in zip(agent_generator, position_generator):
+            agent.move_to(position)
+            self._board.add_agent(agent)
+
+    def add_agent(self, agent: Agent) -> None:
+        self._board.add_agent(agent)
+
     @property
     def display_size(self) -> tuple[float | int, float | int]:
         return self._display_size
@@ -108,6 +122,10 @@ class Game:
     @property
     def screen_size(self) -> tuple[float | int, float | int]:
         return self._screen_size
+
+    @property
+    def sectors_number(self) -> int:
+        return self._sectors_number
 
     @property
     def window_caption(self) -> str:

@@ -4,3 +4,4 @@ eevolve.egg-info/
 venv/
 .idea/
 eevolve/__pycache__/
+tests/
