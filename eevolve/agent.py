@@ -13,6 +13,21 @@ class Agent:
                  agent_position: tuple[int | float, int | float] | numpy.ndarray,
                  agent_name: str, agent_surface: str | pygame.Surface | numpy.ndarray,
                  brain: Brain):
+        """
+        Initializes a new agent.
+
+        :param agent_size: The size of the Agent surface.
+        :param agent_position: The initial position of the Agent.
+        :param agent_name: The name of the agent.
+        :param agent_surface: If passes string image by this path will be loaded,
+        numpy bitmap array will be converted to pygame.Surface, pygame.Surface will be loaded directly.
+        :param brain: The Brain class instance for the Agent.
+
+        Example:
+            brain_instance = Brain(...)
+
+            agent = Agent((50, 50), (100, 100), "Agent_1", "path/to/image.png", brain_instance)
+        """
         self._agent_size = agent_size
         self._agent_name = agent_name
         self._agent_position = agent_position
@@ -24,19 +39,62 @@ class Agent:
 
     def move_by(self, delta: tuple[int | float, int | float],
                 lower: tuple[int, int], upper: tuple[int, int]) -> None:
+        """
+        Change Agent position by given delta within specified bounds with respect to current position.
+
+        Example:
+
+        agent.move_by((5, 5), (0, 0), game.display_size)
+
+        :param delta: Delta X and Y which will be added to current Agent position.
+        :param lower: Lower bound for X and Y.
+        :param upper: Upper bound for X and Y.
+        :return: None
+        """
         delta_x, delta_y = delta
 
         self._rect.x = Utils.clip(self._rect.x + delta_x, lower[0], upper[0])
         self._rect.y = Utils.clip(self._rect.y + delta_y, lower[1], upper[1])
 
     def move_to(self, position: tuple[int | float, int | float] | numpy.ndarray) -> None:
+        """
+        Set Agent position to given value.
+
+        Example:
+
+        agent.move_to((100, 200))
+
+        :param position: New X and Y coordinate of Agent.
+        :return: None
+        """
         self._rect.x = position[0]
         self._rect.y = position[1]
 
     def draw(self, surface: pygame.Surface) -> None:
+        """
+        Draws the agent on a given surface.
+
+        Example:
+            screen = pygame.display.set_mode((800, 600))
+            agent.draw(screen)
+
+        :param surface: The Surface on which to draw an Agent Surface.
+        :return: None
+        """
         surface.blit(self._agent_surface, self.position)
 
     def is_collide(self, agent: Any) -> bool:
+        """
+        Checks if the Agent collides with another Agent.
+
+        Example:
+
+        if agent.is_collide(other_agent):
+            print("Collision detected!")
+
+        :param agent: Agent instance to check collision with.
+        :return: True if the agents collide, False otherwise.
+        """
         return self._rect.colliderect(agent.rect)
 
     @property
