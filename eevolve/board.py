@@ -10,8 +10,8 @@ class Board:
         self._sectors_number = sectors_number
         self._board = [[[] for _ in range(sectors_number)] for _ in range(sectors_number)]
         self._agents = set()
-        self._collided: list[tuple[Agent, Agent], ...] = []
-        self._sector_pairs: list[tuple[Agent, Agent], ...] = []
+        self._collided: list[tuple[Agent, Agent]] = []
+        self._sector_pairs: list[tuple[Agent, Agent]] = []
 
         self.__string = ""
 
@@ -100,11 +100,11 @@ class Board:
         return self._sectors_number
 
     @property
-    def collided(self) -> list[tuple[Agent, Agent], ...]:
+    def collided(self) -> list[tuple[Agent, Agent]]:
         return self._collided
 
     @property
-    def sector_pairs(self) -> list[tuple[Agent, Agent], ...]:
+    def sector_pairs(self) -> list[tuple[Agent, Agent]]:
         return self._sector_pairs
 
     @property

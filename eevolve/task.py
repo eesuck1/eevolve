@@ -5,6 +5,62 @@ from eevolve.board import Board
 
 
 class Task:
+    """
+    A class representing a scheduled task that can be called at a specified interval in milliseconds,
+    if zero function will be called at the end of each frame.
+
+    This class allows you to define a function that will be executed periodically, with the ability to pass arguments
+    to that function while creating or create specific Task subclass with predefined signature.
+
+    Example:
+
+    def game_task_handler(game: Game) -> None:
+        print(game.agents)
+
+    def board_task_handler(board: Board) -> None:
+        print(board.agents)
+
+    def frame_end_task_handler(game: Game) -> None:
+        if len(game.agents) == 0:
+            game.add_agents(10, AgentGenerator.default(game, 10))
+
+    def agent_task_handler(agent: Agent) -> None:
+        agent.move_by((5, 5))
+
+    def collision_task_handler(collision_pair: tuple[Agent, Agent]) -> None:
+        agent_1, agent_2 = collision_pair
+
+        print(f"{agent_1} collide {agent_2}")
+
+    game_task = Task(game_task, 1000, game)
+
+    board_task = BoardTask(board_task_handler, 100)
+
+    frame_end_task = FrameEndTask(frame_end_task_handler, 2500, game)
+
+    agent_task = AgentTask(agent_task_handler, 500)
+
+    collision_task = CollisionTask(collision_task_handler, 0)
+
+    tasks = (game_task, board_task, frame_end_task, agent_task, collision_task)
+
+    game.add_tasks(tasks)
+
+    game.run()
+
+    :param function:
+        The function to be executed by the task.
+
+    :param period_ms:
+        The period (in milliseconds) at which the task should be executed.
+
+    :param args:
+        Positional arguments to pass to the function when called.
+
+    :param kwargs:
+        Keyword arguments to pass to the function when called.
+    """
+
     def __init__(self, function: Callable[..., Any], period_ms: int, *args, **kwargs) -> None:
         self._function = function
         self._period_ms = period_ms

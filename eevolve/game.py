@@ -103,6 +103,10 @@ class Game:
 
         self._tasks.append(task)
 
+    def add_tasks(self, tasks: Iterable[Task]) -> None:
+        for task in tasks:
+            self.add_task(task)
+
     def add_agents(self, copies_number: int, agent_generator: Iterable[Agent],
                    position_generator: Iterable[tuple[int | float, int | float] | numpy.ndarray] = None) -> None:
         if position_generator is None:
