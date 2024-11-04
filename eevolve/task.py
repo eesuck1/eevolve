@@ -54,6 +54,9 @@ class Task:
     :param period_ms:
         The period (in milliseconds) at which the task should be executed.
 
+    :param execution_number:
+        The number of times the task will be performed
+
     :param args:
         Positional arguments to pass to the function when called.
 
@@ -61,9 +64,11 @@ class Task:
         Keyword arguments to pass to the function when called.
     """
 
-    def __init__(self, function: Callable[..., Any], period_ms: int, *args, **kwargs) -> None:
+    def __init__(self, function: Callable[..., Any], period_ms: int, execution_number: int = -1,
+                 *args, **kwargs) -> None:
         self._function = function
         self._period_ms = period_ms
+        self._execution_number = execution_number
         self._timer = 0
 
         self._args = args
@@ -81,25 +86,42 @@ class Task:
     def timer(self, value: float) -> None:
         self._timer = value
 
+    @property
+    def is_dead(self) -> bool:
+        return self._execution_number == 0
+
     def __call__(self, *args, **kwargs) -> Any:
-        return self._function(*self._args, *args, **self._kwargs, **kwargs)
+        if self._execution_number == 0:
+            return
+
+        result = self._function(*self._args, *args, **self._kwargs, **kwargs)
+
+        if self._execution_number > 0:
+            self._execution_number -= 1
+
+        return result
 
 
 class CollisionTask(Task):
-    def __init__(self, function: Callable[[tuple[Agent, Agent]], None], period_ms: int, *args, **kwargs) -> None:
-        super().__init__(function, period_ms, *args, **kwargs)
+    def __init__(self, function: Callable[[tuple[Agent, Agent]], None], period_ms: int, execution_number: int = -1, *args, **kwargs) -> None:
+        super().__init__(function, period_ms, execution_number, *args, **kwargs)
 
 
 class AgentTask(Task):
-    def __init__(self, function: Callable[[Agent], None], period_ms: int, *args, **kwargs):
-        super().__init__(function, period_ms, *args, **kwargs)
+    def __init__(self, function: Callable[[Agent], None], period_ms: int, execution_number: int = -1, *args, **kwargs):
+        super().__init__(function, period_ms, execution_number, *args, **kwargs)
 
 
 class FrameEndTask(Task):
-    def __init__(self, function: Callable[[Any], None], *args, **kwargs) -> None:
-        super().__init__(function, 0, *args, **kwargs)
+    def __init__(self, function: Callable, execution_number: int = -1, *args, **kwargs) -> None:
+        super().__init__(function, 0, execution_number, *args, **kwargs)
 
 
 class BoardTask(Task):
-    def __init__(self, function: Callable[[Board], None], period_ms: int, *args, **kwargs):
-        super().__init__(function, period_ms, *args, **kwargs)
+    def __init__(self, function: Callable[[Board], None], period_ms: int, execution_number: int = -1, *args, **kwargs):
+        super().__init__(function, period_ms, execution_number, *args, **kwargs)
+
+
+class PairTask(Task):
+    def __init__(self, function: Callable[[tuple[Agent, Agent]], None], period_ms: int, execution_number: int = -1, *args, **kwargs):
+        super().__init__(function, period_ms, execution_number, *args, **kwargs)

@@ -4,7 +4,7 @@ import numpy
 import pygame
 
 
-class Utils:
+class Loader:
     @staticmethod
     def load_surface(surface: str | pygame.Surface | numpy.ndarray,
                      desired_size: tuple[int | float, int | float]) -> pygame.Surface | None:
@@ -20,14 +20,14 @@ class Utils:
         Example 1: Loading an image from a file
 
 
-        surface = Utils.load_surface("path/to/image.png", (100, 100))
+        surface = Loader.load_surface("path/to/image.png", (100, 100))
 
         Example 2: Using a Pygame Surface
 
 
         existing_surface = pygame.Surface((200, 200))
 
-        scaled_surface = Utils.load_surface(existing_surface, (100, 100))
+        scaled_surface = Loader.load_surface(existing_surface, (100, 100))
 
         Example 3: Using a NumPy array
         import numpy
@@ -35,7 +35,7 @@ class Utils:
 
         array_data = numpy.zeros((100, 100, 3), dtype=numpy.uint8)
 
-        surface_from_array = Utils.load_surface(array_data, (100, 100))
+        surface_from_array = Loader.load_surface(array_data, (100, 100))
 
         :param surface:
             The source of the image, which can be a file path (string),
@@ -58,46 +58,23 @@ class Utils:
                 and pygame.image.get_extended()):
             try:
                 image = pygame.image.load(surface)
-                result = pygame.transform.scale(image, desired_size).convert()
+
+                if image.get_flags() & pygame.SRCALPHA:
+                    result = pygame.transform.scale(image, desired_size).convert_alpha()
+                else:
+                    result = pygame.transform.scale(image, desired_size).convert()
             except pygame.error:
                 raise ValueError("Surface image could not be loaded.")
         elif isinstance(surface, pygame.Surface):
-            result = surface.convert()
+            result = pygame.transform.scale(surface, desired_size).convert_alpha() \
+                if surface.get_flags() & pygame.SRCALPHA \
+                else pygame.transform.scale(surface, desired_size).convert()
         elif isinstance(surface, numpy.ndarray):
             try:
                 result = pygame.surfarray.make_surface(surface).convert()
             except pygame.error:
                 raise ValueError("Surface image could not be loaded.")
         else:
-            raise ValueError("Surface image could not be loaded. Unsupported format")
+            raise ValueError("Surface image could not be loaded.")
 
         return result if result is not None else pygame.Surface(desired_size).convert()
-
-    @staticmethod
-    def clip(value: int | float, a: int | float, b: int | float) -> int | float:
-        """
-        Clamps a given value between two bounds.
-
-        Example 1:
-
-        clamped_value = Utils.clip(10, 0, 5)
-
-        :param value:
-            The value to be clamped.
-
-        :param a:
-            The lower bound.
-
-        :param b:
-            The upper bound.
-
-        :return:
-            The clamped value, which will be equal to `a` if the original value
-            was less than `a`, equal to `b` if it was greater than `b`,
-            or the original value if it lies within the bounds.
-        """
-
-        value = a if value < a else value
-        value = b if value > b else value
-
-        return value

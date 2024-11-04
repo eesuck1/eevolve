@@ -1,4 +1,7 @@
 from itertools import combinations
+from typing import Iterable, Any
+
+import numpy
 
 from eevolve.agent import Agent
 
@@ -8,6 +11,8 @@ class Board:
                  sectors_number: int = -1) -> None:
         self._sector_width, self._sector_height = sector_size
         self._sectors_number = sectors_number
+        self._display_size = (self._sector_width * self._sectors_number - 1,
+                              self._sector_height * self._sectors_number - 1)
         self._board = [[[] for _ in range(sectors_number)] for _ in range(sectors_number)]
         self._agents = set()
         self._collided: list[tuple[Agent, Agent]] = []
@@ -35,10 +40,27 @@ class Board:
         self._board[x_i][y_i].remove(agent)
         self._agents.remove(agent)
 
-    def move_agent(self, agent: Agent, delta: tuple[int | float, int | float]):
+    def move_agent(self, agent: Agent, delta: tuple[int | float, int | float] | Iterable[float | int]):
+        upper_x, upper_y = self._display_size
+        agent_width, agent_height = agent.size
+
         x0, y0 = agent.position
-        agent.move_by(delta, (0, 0),
-                      (self._sectors_number * self._sector_width - 1, self._sectors_number * self._sector_height - 1))
+        agent.move_by(delta, (0, 0), (upper_x - agent_width, upper_y - agent_height))
+        x1, y1 = agent.position
+
+        x0_i = x0 // self._sector_width
+        x1_i = x1 // self._sector_width
+
+        y0_i = y0 // self._sector_height
+        y1_i = y1 // self._sector_height
+
+        if (x0_i != x1_i) or (y0_i != y1_i):
+            self._board[x0_i][y0_i].remove(agent)
+            self._board[x1_i][y1_i].append(agent)
+
+    def move_agent_toward(self, agent: Agent, point: Iterable[float | int] | numpy.ndarray | Any, distance: float | int):
+        x0, y0 = agent.position
+        agent.move_toward(point, distance, (0, 0), self._display_size)
         x1, y1 = agent.position
 
         x0_i = x0 // self._sector_width
@@ -100,17 +122,21 @@ class Board:
         return self._sectors_number
 
     @property
-    def collided(self) -> list[tuple[Agent, Agent]]:
+    def sector_size(self) -> tuple[int, int]:
+        return self._sector_width, self._sector_height
+
+    @property
+    def collided(self) -> list[tuple[Agent | Any, Agent | Any]]:
         return self._collided
 
     @property
-    def sector_pairs(self) -> list[tuple[Agent, Agent]]:
+    def sector_pairs(self) -> list[tuple[Agent | Any, Agent | Any]]:
         return self._sector_pairs
 
     @property
-    def agents_board(self) -> list[list[list[Agent]]]:
+    def agents_board(self) -> list[list[list[Agent | Any]]]:
         return self._board
 
     @property
-    def agents(self) -> set[Agent]:
+    def agents(self) -> set[Agent | Any]:
         return self._agents

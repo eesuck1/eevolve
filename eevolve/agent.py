@@ -1,11 +1,13 @@
-from typing import Any
 from copy import deepcopy
+from typing import Any, Iterable
 
 import numpy
 import pygame
 
 from eevolve.brain import Brain
-from eevolve.utils import Utils
+from eevolve.loader import Loader
+from eevolve.eemath import Math
+from eevolve.constants import _MAGNITUDE_EPSILON
 
 
 class Agent:
@@ -32,7 +34,7 @@ class Agent:
         self._agent_name = agent_name
         self._agent_position = agent_position
 
-        self._agent_surface = Utils.load_surface(agent_surface, agent_size)
+        self._agent_surface = Loader.load_surface(agent_surface, agent_size)
         self._rect = pygame.Rect(agent_position, agent_size)
 
         self._brain = brain
@@ -53,8 +55,8 @@ class Agent:
         """
         delta_x, delta_y = delta
 
-        self._rect.x = Utils.clip(self._rect.x + delta_x, lower[0], upper[0])
-        self._rect.y = Utils.clip(self._rect.y + delta_y, lower[1], upper[1])
+        self._rect.x = Math.clip(self._rect.x + delta_x, lower[0], upper[0])
+        self._rect.y = Math.clip(self._rect.y + delta_y, lower[1], upper[1])
 
     def move_to(self, position: tuple[int | float, int | float] | numpy.ndarray) -> None:
         """
@@ -69,6 +71,32 @@ class Agent:
         """
         self._rect.x = position[0]
         self._rect.y = position[1]
+
+    def move_toward(self, point: Iterable[float | int] | numpy.ndarray | Any, distance: float | int,
+                    lower: tuple[int, int] = None, upper: tuple[int, int] = None) -> None:
+        if isinstance(point, Agent):
+            x_2, y_2 = point.position
+        elif len(point) == 2 and all((isinstance(x, (float, int)) for x in point)):
+            x_2, y_2 = point[0], point[1]
+        else:
+            raise ValueError(f"'point' instance should be 'Agent' of collection of two numbers, "
+                             f"({', '.join((str(type(value)) for value in point))}) given instead!")
+
+        x_1, y_1 = self.position
+
+        magnitude = numpy.sqrt((x_2 - x_1) ** 2 + (y_2 - y_1) ** 2)
+
+        if magnitude <= _MAGNITUDE_EPSILON:
+            self.move_to((x_2, y_2))
+            return
+
+        x = (x_2 - x_1) / magnitude
+        y = (y_2 - y_1) / magnitude
+
+        lower = (0, 0) if lower is None else lower
+        upper = upper if upper is not None else (float('inf'), float('inf'))
+
+        self.move_by((x * distance, y * distance), lower, upper)
 
     def draw(self, surface: pygame.Surface) -> None:
         """
@@ -97,6 +125,11 @@ class Agent:
         """
         return self._rect.colliderect(agent.rect)
 
+    def forward(self, observation: Iterable[Any], *args, **kwargs) -> Any:
+        self._brain.forward(observation, self, *args, **kwargs)
+
+        return self._brain.decide()
+
     @property
     def position(self) -> tuple[int | float, int | float]:
         return self._rect.topleft
@@ -113,6 +146,10 @@ class Agent:
     def name(self, value: str):
         self._agent_name = value
 
+    @property
+    def size(self) -> tuple[int | float, int | float]:
+        return self._rect.size
+
     def __str__(self) -> str:
         return f"<{self._agent_name}: ({self.position[0]}, {self.position[1]})>"
 
@@ -120,11 +157,14 @@ class Agent:
         return str(self)
 
     def __copy__(self) -> "Agent":
-        return Agent(self._agent_size, self._agent_position,
-                     self._agent_name, self._agent_surface, self._brain)
+        return type(self)(self._agent_size, self._agent_position,
+                          self._agent_name, self._agent_surface, self._brain)
 
-    def __deepcopy__(self, memodict) -> "Agent":
-        new_agent = Agent(self._agent_size, self._agent_position, self._agent_name,
-                          deepcopy(self._agent_surface), deepcopy(self._brain))
+    def __deepcopy__(self, memodict) -> f"Agent":
+        new_agent = type(self)(self._agent_size, self._agent_position, self._agent_name,
+                               deepcopy(self._agent_surface), deepcopy(self._brain))
 
         return new_agent
+
+    def __len__(self) -> int:
+        return 0
