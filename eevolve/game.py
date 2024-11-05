@@ -10,20 +10,20 @@ from eevolve.board import Board
 from eevolve.generator import PositionGenerator, ColorGenerator
 from eevolve.task import Task, FrameEndTask, CollisionTask, AgentTask, BoardTask, PairTask
 from eevolve.loader import Loader
+from eevolve.constants import TOP_LEFT, LOWEST_TASK_PRIORITY, HIGHEST_TASK_PRIORITY
 
 
 class Game:
-    _TOP_LEFT = (0, 0)
-
     def __init__(self,
                  display_size: tuple[float | int, float | int],
                  screen_size: tuple[float | int, float | int],
                  window_caption: str,
                  display_background: str | pygame.Surface | numpy.ndarray,
                  board_sectors_number: int,
-                 agents_list: Iterable[Agent] = None,
-                 tasks_list: Iterable[Task] = None,
-                 draw_sectors: bool = False):
+                 draw_sectors: bool = False,
+                 reset_on: bool = True,
+                 fps_limit: int = 300):
+        self._task_priorities = LOWEST_TASK_PRIORITY - HIGHEST_TASK_PRIORITY + 1
 
         self._display = pygame.Surface(display_size)
         self._screen = pygame.display.set_mode(screen_size)
@@ -33,8 +33,8 @@ class Game:
         self._screen_size = screen_size
         self._window_caption = window_caption
 
-        self._agents_list = agents_list if agents_list is not None else []
-        self._tasks = tasks_list if tasks_list is not None else []
+        self._agents_list = []
+        self._tasks: list[list[Task]] = [[] for _ in range(self._task_priorities)]
 
         self._delta_time = 0.0
         self._time = 0.0
@@ -47,56 +47,72 @@ class Game:
         self._sectors_number = board_sectors_number
         self._sector_rects = []
         self._sector_colors = []
-        self._draw_sectors = draw_sectors
+
+        self._to_draw_sectors = draw_sectors
+
+        self._game_running = True
+        self._blit_function = None
+
+        self._reset_on = reset_on
+        self._fps_limit = fps_limit
 
         for agent in self._agents_list:
             self._board.add_agent(agent)
 
     def _init_internal_tasks(self) -> None:
-        self.add_task(FrameEndTask(lambda: self._board.check_collision()))
-        self.add_task(FrameEndTask(lambda: self.draw()))
-        self.add_task(FrameEndTask(lambda: self._board.check_sector_pairs()))
+        self.add_task(FrameEndTask(self._timer, priority=HIGHEST_TASK_PRIORITY))
+        self.add_task(FrameEndTask(self._board.check_collision, priority=HIGHEST_TASK_PRIORITY))
+        self.add_task(FrameEndTask(self._board.check_sector_pairs, priority=HIGHEST_TASK_PRIORITY))
+        self.add_task(FrameEndTask(self._check_dead, priority=LOWEST_TASK_PRIORITY))
+        self.add_task(FrameEndTask(self._draw, priority=LOWEST_TASK_PRIORITY))
+        self.add_task(FrameEndTask(self._update_display, priority=LOWEST_TASK_PRIORITY))
 
-    def draw(self) -> None:
-        self._display.blit(self._background, self._TOP_LEFT)
+    def _draw(self) -> None:
+        self._display.blit(self._background, TOP_LEFT)
 
         for agent in self._board.agents:
             agent.draw(self._display)
 
-        if self._draw_sectors:
-            self.draw_sectors()
+        if self._to_draw_sectors:
+            self._draw_sectors()
 
-    def do_tasks(self) -> None:
+    def _do_tasks(self) -> None:
         to_remove = []
 
-        for task in self._tasks:
-            task.timer += self._delta_time
+        # print(f"time: {self._time / 1000.0} " + "-" * 64)
 
-            if isinstance(task, CollisionTask) and task.timer >= task.period:
-                for collision_pair in self._board.collided:
-                    task(collision_pair)
-            elif isinstance(task, AgentTask) and task.timer >= task.period:
-                for agent in self._board.agents:
-                    task(agent)
-            elif isinstance(task, BoardTask) and task.timer >= task.period:
-                task(self._board)
-            elif isinstance(task, PairTask) and task.timer >= task.period:
-                for pair in self._board.sector_pairs:
-                    task(pair)
-            elif isinstance(task, FrameEndTask):
-                task()
-            elif task.timer >= task.period:
-                task()
-            else:
-                continue
+        for priority in range(self._task_priorities):
+            for task in self._tasks[priority]:
+                task.timer += self._delta_time
 
-            if task.is_dead:
-                to_remove.append(task)
-            task.timer = 0
+                if task.timer >= task.period:
+                    # print(task)
+
+                    if isinstance(task, CollisionTask):
+                        for collision_pair in self._board.collided:
+                            task(collision_pair)
+                    elif isinstance(task, AgentTask):
+                        for agent in self._board.agents:
+                            task(agent)
+                    elif isinstance(task, BoardTask):
+                        task(self._board)
+                    elif isinstance(task, PairTask):
+                        for pair in self._board.sector_pairs:
+                            task(pair)
+                    elif isinstance(task, FrameEndTask):
+                        task()
+                    else:
+                        task()
+                else:
+                    continue
+
+                if task.is_dead:
+                    to_remove.append(task)
+                task.timer = 0
 
         self.remove_tasks(to_remove)
 
-    def draw_sectors(self) -> None:
+    def _draw_sectors(self) -> None:
         if len(self._sector_rects) == 0:
             width, height = self._board.sector_size
 
@@ -117,12 +133,33 @@ class Game:
                 for agent in sector:
                     pygame.draw.rect(self._display, color, agent.rect, width=1)
 
+    def _check_dead(self) -> None:
+        self._board.check_dead()
+
+        for agent in self._board.dead:
+            self._board.remove_agent(agent)
+
+    def _update_display(self) -> None:
+        self._blit_function()
+        self._clock.tick(self._fps_limit)
+        pygame.display.update()
+
+    def _timer(self) -> None:
+        self._delta_time = self._clock.get_time()
+        self._time += self._delta_time
+
     def run(self) -> None:
         self._init_internal_tasks()
 
+        if self._display_size != self._screen_size:
+            self._blit_function = lambda: self._screen.blit(
+                pygame.transform.scale(self._display, self._screen_size), TOP_LEFT)
+        else:
+            self._blit_function = lambda: self._screen.blit(self._display, TOP_LEFT)
+
         pygame.display.set_caption(self._window_caption)
 
-        while True:
+        while self._game_running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
@@ -130,23 +167,15 @@ class Game:
 
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_s:
-                        self._draw_sectors = not self._draw_sectors
+                        self._to_draw_sectors = not self._to_draw_sectors
 
-            self._delta_time = self._clock.get_time()
-            self._time += self._delta_time
-
-            self.do_tasks()
-
-            self._screen.blit(
-                pygame.transform.scale(self._display, self._screen_size), self._TOP_LEFT)
-            self._clock.tick(120)
-            pygame.display.update()
+            self._do_tasks()
 
     def add_task(self, task: Task) -> None:
         if not isinstance(task, Task):
             raise ValueError("Argument must be instance of Task")
 
-        self._tasks.append(task)
+        self._tasks[task.priority].append(task)
 
     def add_tasks(self, tasks: Iterable[Task]) -> None:
         for task in tasks:
@@ -157,7 +186,7 @@ class Game:
             print(f"[WARNING] Trying to remove {task} which not in tasks list!")
             return
 
-        self._tasks.remove(task)
+        self._tasks[task.priority].remove(task)
 
     def remove_tasks(self, tasks: Iterable[Task]) -> None:
         for task in tasks:

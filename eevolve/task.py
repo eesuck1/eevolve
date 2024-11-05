@@ -2,11 +2,12 @@ from typing import Callable, Any
 
 from eevolve.agent import Agent
 from eevolve.board import Board
+from eevolve.constants import HIGHEST_TASK_PRIORITY, LOWEST_TASK_PRIORITY
 
 
 class Task:
     """
-    A class representing a scheduled task that can be called at a specified interval in milliseconds,
+    A class representing a scheduled task that can be called with interval greater or equal to given in milliseconds,
     if zero function will be called at the end of each frame.
 
     This class allows you to define a function that will be executed periodically, with the ability to pass arguments
@@ -65,11 +66,17 @@ class Task:
     """
 
     def __init__(self, function: Callable[..., Any], period_ms: int, execution_number: int = -1,
-                 *args, **kwargs) -> None:
+                 priority: int = HIGHEST_TASK_PRIORITY, *args, **kwargs) -> None:
         self._function = function
         self._period_ms = period_ms
         self._execution_number = execution_number
         self._timer = 0
+
+        if priority > LOWEST_TASK_PRIORITY or priority < HIGHEST_TASK_PRIORITY or not isinstance(priority, int):
+            raise ValueError(f"Task priority should be in bounds: [{HIGHEST_TASK_PRIORITY}, {LOWEST_TASK_PRIORITY}], "
+                             f"where {HIGHEST_TASK_PRIORITY} is highest. {priority} given instead!")
+
+        self._priority = priority
 
         self._args = args
         self._kwargs = kwargs
@@ -90,6 +97,10 @@ class Task:
     def is_dead(self) -> bool:
         return self._execution_number == 0
 
+    @property
+    def priority(self) -> int:
+        return self._priority
+
     def __call__(self, *args, **kwargs) -> Any:
         if self._execution_number == 0:
             return
@@ -101,27 +112,38 @@ class Task:
 
         return result
 
+    def __str__(self) -> str:
+        return f"<{self.__class__.__name__}: handler: {self._function.__name__}, priority: {self._priority}, period: {self._period_ms}>"
+
+    def __repr__(self) -> str:
+        return str(self)
+
 
 class CollisionTask(Task):
-    def __init__(self, function: Callable[[tuple[Agent, Agent]], None], period_ms: int, execution_number: int = -1, *args, **kwargs) -> None:
-        super().__init__(function, period_ms, execution_number, *args, **kwargs)
+    def __init__(self, function: Callable[[tuple[Agent, Agent]], None], period_ms: int, execution_number: int = -1,
+                 priority: int = HIGHEST_TASK_PRIORITY, *args, **kwargs) -> None:
+        super().__init__(function, period_ms, execution_number, priority, *args, **kwargs)
 
 
 class AgentTask(Task):
-    def __init__(self, function: Callable[[Agent], None], period_ms: int, execution_number: int = -1, *args, **kwargs):
-        super().__init__(function, period_ms, execution_number, *args, **kwargs)
+    def __init__(self, function: Callable[[Agent], None], period_ms: int, execution_number: int = -1,
+                 priority: int = HIGHEST_TASK_PRIORITY, *args, **kwargs):
+        super().__init__(function, period_ms, execution_number, priority, *args, **kwargs)
 
 
 class FrameEndTask(Task):
-    def __init__(self, function: Callable, execution_number: int = -1, *args, **kwargs) -> None:
-        super().__init__(function, 0, execution_number, *args, **kwargs)
+    def __init__(self, function: Callable, execution_number: int = -1,
+                 priority: int = HIGHEST_TASK_PRIORITY, *args, **kwargs) -> None:
+        super().__init__(function, 0, execution_number, priority, *args, **kwargs)
 
 
 class BoardTask(Task):
-    def __init__(self, function: Callable[[Board], None], period_ms: int, execution_number: int = -1, *args, **kwargs):
-        super().__init__(function, period_ms, execution_number, *args, **kwargs)
+    def __init__(self, function: Callable[[Board], None], period_ms: int, execution_number: int = -1,
+                 priority: int = HIGHEST_TASK_PRIORITY, *args, **kwargs):
+        super().__init__(function, period_ms, execution_number, priority, *args, **kwargs)
 
 
 class PairTask(Task):
-    def __init__(self, function: Callable[[tuple[Agent, Agent]], None], period_ms: int, execution_number: int = -1, *args, **kwargs):
-        super().__init__(function, period_ms, execution_number, *args, **kwargs)
+    def __init__(self, function: Callable[[tuple[Agent, Agent]], None], period_ms: int, execution_number: int = -1,
+                 priority: int = HIGHEST_TASK_PRIORITY, *args, **kwargs):
+        super().__init__(function, period_ms, execution_number, priority, *args, **kwargs)

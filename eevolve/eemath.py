@@ -1,5 +1,5 @@
 from typing import Any, Iterable
-from eevolve.constants import _MAGNITUDE_EPSILON
+from eevolve.constants import MAGNITUDE_EPSILON
 
 import numpy
 
@@ -49,4 +49,4 @@ class Math:
 
         distance = numpy.sqrt((x_2 - x_1) ** 2 + (y_2 - y_1) ** 2)
 
-        return distance if distance > 0 else _MAGNITUDE_EPSILON
+        return distance if distance > 0 else MAGNITUDE_EPSILON

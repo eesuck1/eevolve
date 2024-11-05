@@ -9,7 +9,7 @@ class Brain:
         self._output = None
         self._decision = None
 
-    def forward(self, observation: Iterable[Any] | Any, owner: Any = None, *args, **kwargs) -> None:
+    def forward(self, observation: Iterable[Any] | Any, owner: Any, *args, **kwargs) -> None:
         self._output = None
 
     def decide(self) -> Any:

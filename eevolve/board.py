@@ -17,6 +17,7 @@ class Board:
         self._agents = set()
         self._collided: list[tuple[Agent, Agent]] = []
         self._sector_pairs: list[tuple[Agent, Agent]] = []
+        self._dead_agents: list[Agent] = []
 
         self.__string = ""
 
@@ -40,7 +41,10 @@ class Board:
         self._board[x_i][y_i].remove(agent)
         self._agents.remove(agent)
 
-    def move_agent(self, agent: Agent, delta: tuple[int | float, int | float] | Iterable[float | int]):
+    def move_agent(self, agent: Agent, delta: tuple[int | float, int | float] | Iterable[float | int]) -> None:
+        if agent not in self._agents:
+            return
+
         upper_x, upper_y = self._display_size
         agent_width, agent_height = agent.size
 
@@ -58,7 +62,11 @@ class Board:
             self._board[x0_i][y0_i].remove(agent)
             self._board[x1_i][y1_i].append(agent)
 
-    def move_agent_toward(self, agent: Agent, point: Iterable[float | int] | numpy.ndarray | Any, distance: float | int):
+    def move_agent_toward(self, agent: Agent, point: Iterable[float | int] | numpy.ndarray | Any,
+                          distance: float | int) -> None:
+        if agent not in self._agents:
+            return
+
         x0, y0 = agent.position
         agent.move_toward(point, distance, (0, 0), self._display_size)
         x1, y1 = agent.position
@@ -104,6 +112,13 @@ class Board:
                 for pair in combinations(sector, 2):
                     self._sector_pairs.append(pair)
 
+    def check_dead(self) -> None:
+        self._dead_agents.clear()
+
+        for agent in self._agents:
+            if agent.is_dead:
+                self._dead_agents.append(agent)
+
     def __str__(self) -> str:
         self.__string = ""
         self.__string += "-" * 128 + "\n"
@@ -140,3 +155,7 @@ class Board:
     @property
     def agents(self) -> set[Agent | Any]:
         return self._agents
+
+    @property
+    def dead(self) -> list[Agent | Any]:
+        return self._dead_agents

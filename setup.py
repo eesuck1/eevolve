@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="eevolve",
-    version="0.0.7",
+    version="0.0.9",
     author="Isak Volodymyr",
     author_email="volodymyr.o.isak@gmail.com",
     description="Evolution Algorithms Playground",

@@ -7,7 +7,7 @@ import pygame
 from eevolve.brain import Brain
 from eevolve.loader import Loader
 from eevolve.eemath import Math
-from eevolve.constants import _MAGNITUDE_EPSILON
+from eevolve.constants import MAGNITUDE_EPSILON
 
 
 class Agent:
@@ -38,6 +38,7 @@ class Agent:
         self._rect = pygame.Rect(agent_position, agent_size)
 
         self._brain = brain
+        self._is_dead = False
 
     def move_by(self, delta: tuple[int | float, int | float],
                 lower: tuple[int, int], upper: tuple[int, int]) -> None:
@@ -86,7 +87,7 @@ class Agent:
 
         magnitude = numpy.sqrt((x_2 - x_1) ** 2 + (y_2 - y_1) ** 2)
 
-        if magnitude <= _MAGNITUDE_EPSILON:
+        if magnitude <= MAGNITUDE_EPSILON:
             self.move_to((x_2, y_2))
             return
 
@@ -125,10 +126,13 @@ class Agent:
         """
         return self._rect.colliderect(agent.rect)
 
-    def forward(self, observation: Iterable[Any], *args, **kwargs) -> Any:
+    def decide(self, observation: Iterable[Any], *args, **kwargs) -> Any:
         self._brain.forward(observation, self, *args, **kwargs)
 
         return self._brain.decide()
+
+    def die(self) -> None:
+        self._is_dead = True
 
     @property
     def position(self) -> tuple[int | float, int | float]:
@@ -150,6 +154,14 @@ class Agent:
     def size(self) -> tuple[int | float, int | float]:
         return self._rect.size
 
+    @property
+    def is_dead(self) -> bool:
+        return self._is_dead
+
+    @is_dead.setter
+    def is_dead(self, value: bool) -> None:
+        self._is_dead = value
+
     def __str__(self) -> str:
         return f"<{self._agent_name}: ({self.position[0]}, {self.position[1]})>"
 
@@ -160,7 +172,7 @@ class Agent:
         return type(self)(self._agent_size, self._agent_position,
                           self._agent_name, self._agent_surface, self._brain)
 
-    def __deepcopy__(self, memodict) -> f"Agent":
+    def __deepcopy__(self, memodict) -> "Agent":
         new_agent = type(self)(self._agent_size, self._agent_position, self._agent_name,
                                deepcopy(self._agent_surface), deepcopy(self._brain))
 
