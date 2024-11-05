@@ -9,7 +9,8 @@ setup(
     description="Evolution Algorithms Playground",
     packages=find_packages(),
     install_requires=[
-        "numpy>=2.1.2",
-        "pygame-ce>=2.5.2"
+        "torch==2.5.1",
+        "numpy==2.1.2",
+        "pygame-ce==2.5.2",
     ]
 )
