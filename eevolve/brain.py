@@ -1,4 +1,4 @@
-from typing import Iterable, Any, Callable
+from typing import Iterable, Any, Callable, Literal
 
 import numpy
 
@@ -9,7 +9,8 @@ class Brain:
         self._output = None
         self._decision = None
 
-        self._weights = None
+        self._weights = []
+        self._biases = []
 
     def add_layer(self) -> None:
         ...
