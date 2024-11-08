@@ -5,10 +5,23 @@ class Activation:
     def __call__(self, sample: numpy.ndarray) -> numpy.ndarray:
         return sample
 
+    def __str__(self) -> str:
+        return f"{self.__class__.__name__}"
+
 
 class Relu(Activation):
     def __call__(self, sample: numpy.ndarray) -> numpy.ndarray:
         sample[sample < 0.0] = 0.0
+
+        return sample
+
+
+class ParametricRelu(Activation):
+    def __init__(self, alpha: float) -> None:
+        self._alpha = alpha
+
+    def __call__(self, sample: numpy.ndarray) -> numpy.ndarray:
+        sample[sample < 0.0] *= self._alpha
 
         return sample
 
@@ -25,6 +38,6 @@ class Sigmoid(Activation):
 
 class Softmax(Activation):
     def __call__(self, sample: numpy.ndarray) -> numpy.ndarray:
-        corrected = sample - sample.max()
+        corrected = sample - sample.max(axis=-1, keepdims=True)
 
-        return numpy.exp(corrected) / numpy.exp(corrected).sum()
+        return numpy.exp(corrected) / numpy.exp(corrected).sum(axis=-1, keepdims=True)

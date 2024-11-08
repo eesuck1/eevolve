@@ -14,7 +14,7 @@ class Agent:
     def __init__(self, agent_size: tuple[int | float, int | float],
                  agent_position: tuple[int | float, int | float] | numpy.ndarray,
                  agent_name: str, agent_surface: str | pygame.Surface | numpy.ndarray,
-                 brain: Brain):
+                 brain: Brain = None):
         """
         Initializes a new agent.
 
@@ -37,7 +37,7 @@ class Agent:
         self._agent_surface = Loader.load_surface(agent_surface, agent_size)
         self._rect = pygame.Rect(agent_position, agent_size)
 
-        self._brain = brain
+        self._brain = brain if brain is not None else Brain([])
         self._is_dead = False
 
     def move_by(self, delta: tuple[int | float, int | float],

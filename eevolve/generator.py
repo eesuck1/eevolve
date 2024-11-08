@@ -170,17 +170,3 @@ class ColorGenerator:
             color = numpy.random.randint(low=bounds[0], high=bounds[1], size=(3,))
 
             yield tuple(color) if return_tuple else color
-
-
-class NumbersGenerator:
-    @staticmethod
-    def uniform(shape: tuple[int, ...], offset: float = 0.0, scaler: float = 1.0) -> numpy.ndarray:
-        return scaler * numpy.random.rand(*shape) + offset
-
-    @staticmethod
-    def normal(shape: tuple[int, ...], mean: float = 0.0, variance: float = 1.0) -> numpy.ndarray:
-        return variance * numpy.random.randn(*shape) + mean
-
-    @staticmethod
-    def weights(shape: tuple[int, ...], offset: float = 0.0, scaler: float = 1.0) -> numpy.ndarray:
-        return NumbersGenerator.uniform(shape, offset, scaler)

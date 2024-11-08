@@ -2,8 +2,8 @@ import os
 import numpy
 import eevolve
 
-from tests.war.source.agent import WarAgent, WarBrain
-from tests.war.source.constants import *
+from examples.war.source.agent import WarAgent, WarBrain
+from examples.war.source.constants import *
 
 
 class Simulation:
