@@ -5,3 +5,4 @@ venv/
 .idea/
 eevolve/__pycache__/
 tests/
+examples/*/*/__pycache__/
