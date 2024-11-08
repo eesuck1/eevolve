@@ -21,3 +21,10 @@ class Tanh(Activation):
 class Sigmoid(Activation):
     def __call__(self, sample: numpy.ndarray) -> numpy.ndarray:
         return 1.0 / (1.0 + numpy.exp(-sample))
+
+
+class Softmax(Activation):
+    def __call__(self, sample: numpy.ndarray) -> numpy.ndarray:
+        corrected = sample - sample.max()
+
+        return numpy.exp(corrected) / numpy.exp(corrected).sum()
