@@ -32,7 +32,8 @@ class PositionGenerator:
 
     @staticmethod
     def even(game: Any, number: int, offset_scaler: int = 10,
-             lower: tuple[float | int, float | int] = None, upper: tuple[float | int, float | int] = None) -> Iterable[numpy.ndarray]:
+             lower: tuple[float | int, float | int] = None, upper: tuple[float | int, float | int] = None) -> Iterable[
+        numpy.ndarray]:
         """
         Generates a specified number of evenly distributed coordinate pairs, considering an offset scaler.
 
@@ -66,7 +67,7 @@ class PositionGenerator:
                 dividers.append(i)
 
         x, y = numpy.mgrid[lower[0]:upper[0]:dividers[len(dividers) // 2] * 1j,
-                           lower[1]:upper[1]:number / dividers[len(dividers) // 2] * 1j]
+               lower[1]:upper[1]:number / dividers[len(dividers) // 2] * 1j]
 
         for pair in numpy.column_stack((x.ravel(), y.ravel())):
             yield pair
@@ -170,3 +171,16 @@ class ColorGenerator:
 
             yield tuple(color) if return_tuple else color
 
+
+class NumbersGenerator:
+    @staticmethod
+    def uniform(shape: tuple[int, ...], offset: float = 0.0, scaler: float = 1.0) -> numpy.ndarray:
+        return scaler * numpy.random.rand(*shape) + offset
+
+    @staticmethod
+    def normal(shape: tuple[int, ...], mean: float = 0.0, variance: float = 1.0) -> numpy.ndarray:
+        return variance * numpy.random.randn(*shape) + mean
+
+    @staticmethod
+    def weights(shape: tuple[int, ...], offset: float = 0.0, scaler: float = 1.0) -> numpy.ndarray:
+        return NumbersGenerator.uniform(shape, offset, scaler)
