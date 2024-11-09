@@ -47,6 +47,22 @@ class Brain:
         else:
             raise ValueError(f"Mapping format is not supported `{type(self._mapping)}`")
 
+    def mutate(self) -> None:
+        for layer in self._layers:
+            layer.mutate()
+
+    def combine(self, another: "Brain") -> "Brain":
+        if len(self._layers) != len(another.layers):
+            raise ValueError(f"Lengths of the layers must match for both objects. "
+                             f"{len(self._layers)} vs {len(another.layers)} instead!")
+
+        new_brain = type(self)(self._mapping)
+
+        for layer_1, layer_2 in zip(self._layers, another.layers):
+            new_brain.add_layer(layer_1.combine(layer_2))
+
+        return new_brain
+
     @property
     def decision(self) -> Any:
         return self._decision
@@ -55,8 +71,12 @@ class Brain:
     def output(self) -> Any:
         return self._output
 
+    @property
+    def layers(self) -> list[Layer, ...]:
+        return self._layers
+
     def __call__(self, observation: Iterable[Any] | numpy.ndarray | Any, owner: Any = None,
                  output_function: Callable[[numpy.ndarray], Any] = lambda x: x, *args, **kwargs) -> Any:
         self.forward(observation, owner, output_function, *args, **kwargs)
-        
+
         return self.decide()
