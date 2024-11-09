@@ -113,7 +113,8 @@ class Task:
         return result
 
     def __str__(self) -> str:
-        return f"<{self.__class__.__name__}: handler: {self._function.__name__}, priority: {self._priority}, period: {self._period_ms}>"
+        return (f"<{self.__class__.__name__}: handler: {self._function.__name__}, priority: {self._priority}, "
+                f"period: {self._period_ms}>")
 
     def __repr__(self) -> str:
         return str(self)

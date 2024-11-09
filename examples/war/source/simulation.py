@@ -1,8 +1,9 @@
 import os
-import numpy
-import eevolve
 
-from examples.war.source.agent import WarAgent, WarBrain
+import numpy
+
+import eevolve
+from examples.war.source.agent import WarAgent
 from examples.war.source.constants import *
 
 
@@ -12,13 +13,22 @@ class Simulation:
                                   os.path.join(ASSETS_PATH, "bg.png"), SECTORS_NUMBER)
 
         self._field_size = field_size
+        self._mapping = [(0, -3), (3, 0), (3, 0), (-3, 0)]
 
     @staticmethod
     def movement_task_handler(board: eevolve.Board) -> None:
         for row in board.agents_board:
             for sector in row:
-                for agent in sector:
-                    board.move_agent(agent, agent.decide(sector))
+                for agent_1 in sector:
+                    distances = eevolve.Math.distances(agent_1, sector)
+
+                    if len(distances) < 10:
+                        distances = numpy.pad(distances, (0, 10 - len(distances)), mode="constant", constant_values=0.0)
+                    else:
+                        distances = distances[:10]
+
+                    distances = numpy.expand_dims(distances, axis=0)
+                    board.move_agent(agent_1, agent_1.decide(distances))
 
     @staticmethod
     def collision_handler(board: eevolve.Board) -> None:
@@ -32,15 +42,6 @@ class Simulation:
                 board.move_agent_toward(agent_1, agent_2, -5)
                 board.move_agent_toward(agent_2, agent_1, -5)
 
-    @staticmethod
-    def brain_handler(output: int) -> tuple[int, int]:
-        vertical = numpy.random.randint(-3, 4)
-
-        if output == WarBrain.LEFT:
-            return -3, vertical
-        elif output == WarBrain.RIGHT:
-            return 3, vertical
-
     def init_agents(self) -> None:
         agents_number = self._field_size // 2
 
@@ -48,10 +49,16 @@ class Simulation:
         agent_surface_blue = os.path.join(ASSETS_PATH, "blue.png")
         agent_surface_red = os.path.join(ASSETS_PATH, "red.png")
 
-        agent_blue = WarAgent(agent_size, (0, 0), "Blue", agent_surface_blue,
-                              WarBrain(self.brain_handler))
-        agent_red = WarAgent(agent_size, (0, 0), "Red", agent_surface_red,
-                             WarBrain(self.brain_handler))
+        brain = eevolve.Brain(self._mapping)
+        brain.add_layers([
+            eevolve.Dense((10, 8), activation=eevolve.Relu()),
+            eevolve.Dense((8, 8), activation=eevolve.Relu()),
+            eevolve.Dense((8, 4), activation=eevolve.Softmax()),
+            eevolve.Argmax(return_int=True),
+        ])
+
+        agent_blue = WarAgent(agent_size, (0, 0), "Blue", agent_surface_blue, brain)
+        agent_red = WarAgent(agent_size, (0, 0), "Red", agent_surface_red, brain)
 
         width, height = self._game.display_size
 

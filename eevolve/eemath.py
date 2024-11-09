@@ -50,3 +50,10 @@ class Math:
         distance = numpy.sqrt((x_2 - x_1) ** 2 + (y_2 - y_1) ** 2)
 
         return distance if distance > 0 else MAGNITUDE_EPSILON
+
+    @staticmethod
+    def distances(a: Iterable[float | int] | numpy.ndarray | Any,
+                  b: Iterable[Iterable[float | int] | numpy.ndarray | Any] | Any) -> numpy.ndarray:
+        return numpy.array([Math.distance(a, other)
+                            for other in b
+                            if a is not other])

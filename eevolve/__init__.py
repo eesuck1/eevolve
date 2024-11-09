@@ -7,5 +7,5 @@ from .generator import PositionGenerator, AgentGenerator, ColorGenerator
 from .numbers import NumbersGenerator
 from .eemath import Math
 from .loader import Loader
-from .layers import Layer, Dense, Conv1D
+from .layers import Layer, Dense, Conv1D, Argmax
 from .activations import Activation, Tanh, Relu, ParametricRelu, Softmax, Sigmoid

@@ -1,7 +1,9 @@
+import copy
 from typing import Iterable, Any, Callable
-from eevolve.layers import Layer
 
 import numpy
+
+from eevolve.layers import Layer
 
 
 class Brain:
@@ -63,6 +65,14 @@ class Brain:
 
         return new_brain
 
+    def new_like_me(self) -> "Brain":
+        new_brain = type(self)(self._mapping)
+
+        for layer in self._layers:
+            new_brain.add_layer(layer.new_like_me())
+
+        return new_brain
+
     @property
     def decision(self) -> Any:
         return self._decision
@@ -72,7 +82,7 @@ class Brain:
         return self._output
 
     @property
-    def layers(self) -> list[Layer, ...]:
+    def layers(self) -> list[Layer]:
         return self._layers
 
     def __call__(self, observation: Iterable[Any] | numpy.ndarray | Any, owner: Any = None,
@@ -80,3 +90,17 @@ class Brain:
         self.forward(observation, owner, output_function, *args, **kwargs)
 
         return self.decide()
+
+    def __copy__(self) -> "Brain":
+        new_brain = type(self)(self._mapping)
+        new_brain.add_layers(self._layers)
+
+        return new_brain
+
+    def __deepcopy__(self, memodict: dict) -> "Brain":
+        new_brain = type(self)(self._mapping)
+
+        for layer in self._layers:
+            new_brain.add_layer(copy.deepcopy(layer))
+
+        return new_brain

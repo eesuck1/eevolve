@@ -10,7 +10,11 @@ from eevolve.board import Board
 from eevolve.generator import PositionGenerator, ColorGenerator
 from eevolve.task import Task, FrameEndTask, CollisionTask, AgentTask, BoardTask, PairTask
 from eevolve.loader import Loader
-from eevolve.constants import TOP_LEFT, LOWEST_TASK_PRIORITY, HIGHEST_TASK_PRIORITY
+from eevolve.constants import TOP_LEFT, LOWEST_TASK_PRIORITY, HIGHEST_TASK_PRIORITY, DEFAULT_FONT, \
+    DEFAULT_FONT_SCALE_FACTOR, DEFAULT_FONT_COLOR
+
+pygame.init()
+pygame.font.init()
 
 
 class Game:
@@ -21,6 +25,7 @@ class Game:
                  display_background: str | pygame.Surface | numpy.ndarray,
                  board_sectors_number: int,
                  draw_sectors: bool = False,
+                 draw_time: bool = True,
                  reset_on: bool = True,
                  fps_limit: int = 300):
         self._task_priorities = LOWEST_TASK_PRIORITY - HIGHEST_TASK_PRIORITY + 1
@@ -49,6 +54,10 @@ class Game:
         self._sector_colors = []
 
         self._to_draw_sectors = draw_sectors
+        self._to_draw_time = draw_time
+
+        self._font = pygame.font.SysFont(DEFAULT_FONT, screen_size[0] // DEFAULT_FONT_SCALE_FACTOR)
+        self._font_position = (screen_size[0] // DEFAULT_FONT_SCALE_FACTOR, screen_size[1] // DEFAULT_FONT_SCALE_FACTOR)
 
         self._game_running = True
         self._blit_function = None
@@ -79,14 +88,11 @@ class Game:
     def _do_tasks(self) -> None:
         to_remove = []
 
-        # print(f"time: {self._time / 1000.0} " + "-" * 64)
-
         for priority in range(self._task_priorities):
             for task in self._tasks[priority]:
                 task.timer += self._delta_time
 
                 if task.timer >= task.period:
-                    # print(task)
 
                     if isinstance(task, CollisionTask):
                         for collision_pair in self._board.collided:
@@ -141,6 +147,12 @@ class Game:
 
     def _update_display(self) -> None:
         self._blit_function()
+
+        if self._to_draw_time:
+            self._screen.blit(
+                self._font.render(f"time: {self._time / 1000}", False, DEFAULT_FONT_COLOR),
+                self._font_position)
+
         self._clock.tick(self._fps_limit)
         pygame.display.update()
 

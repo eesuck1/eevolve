@@ -1,3 +1,5 @@
+import copy
+
 import numpy
 
 from eevolve.activations import Activation
@@ -40,6 +42,14 @@ class Layer:
 
         return new_layer
 
+    def new_like_me(self) -> "Layer":
+        new_layer = type(self)(self._shape, self._activation, self._use_bias, self._sigma)
+
+        new_layer.weights = numpy.empty(self._shape)
+        new_layer.biases = numpy.empty(self._shape) if self._use_bias else numpy.empty(self._shape)
+
+        return new_layer
+
     @property
     def weights(self) -> numpy.ndarray:
         return self._weights
@@ -66,9 +76,25 @@ class Layer:
     def __repr__(self) -> str:
         return str(self)
 
+    def __copy__(self) -> "Layer":
+        new_layer = type(self)(self._shape, self._activation, self._use_bias, self._sigma)
+
+        new_layer.weights = self._weights
+        new_layer.biases = self._bias
+
+        return new_layer
+
+    def __deepcopy__(self, memodict: dict) -> "Layer":
+        new_layer = type(self)(self._shape, self._activation, self._use_bias, self._sigma)
+
+        new_layer.weights = copy.deepcopy(self._weights)
+        new_layer.biases = copy.deepcopy(self._bias)
+
+        return new_layer
+
 
 class Dense(Layer):
-    def __init__(self, shape: tuple[int, int], activation: Activation = None, use_bias: bool = True,
+    def __init__(self, shape: tuple[int, ...], activation: Activation = None, use_bias: bool = True,
                  mutation_scaler: float = 0.1):
         super().__init__(shape, activation, use_bias, mutation_scaler)
 
@@ -77,6 +103,16 @@ class Dense(Layer):
             if use_bias \
             else numpy.zeros((1, shape[1]))
 
+    def new_like_me(self) -> "Layer":
+        new_layer = type(self)(self._shape, self._activation, self._use_bias, self._sigma)
+
+        new_layer.weights = NumbersGenerator.weights(self._shape)
+        new_layer.biases = NumbersGenerator.weights((1, self._shape[1])) \
+            if self._use_bias \
+            else numpy.zeros((1, self._shape[1]))
+
+        return new_layer
+
     def __call__(self, sample: numpy.ndarray) -> numpy.ndarray:
         if len(sample.shape) != 2:
             raise ValueError(f"Expected `shape` length for `sample` is 2. {len(sample.shape)} given instead.")
@@ -84,14 +120,26 @@ class Dense(Layer):
 
 
 class Conv1D(Layer):
-    def __init__(self, shape: tuple[int, int], activation: Activation = None, use_bias: bool = True,
+    def __init__(self, shape: tuple[int, ...], activation: Activation = None, use_bias: bool = True,
                  mutation_scaler: float = 0.1) -> None:
         super().__init__(shape, activation, use_bias, mutation_scaler)
 
         self._filters, self._kernel_size = shape
 
         self._weights = NumbersGenerator.weights((self._filters, self._kernel_size))
-        self._bias = NumbersGenerator.weights((self._filters,))
+        self._bias = NumbersGenerator.weights((self._filters,)) \
+            if self._use_bias \
+            else numpy.zeros((self._filters,))
+
+    def new_like_me(self) -> "Layer":
+        new_layer = type(self)(self._shape, self._activation, self._use_bias, self._sigma)
+
+        new_layer.weights = NumbersGenerator.weights((self._filters, self._kernel_size))
+        new_layer.biases = NumbersGenerator.weights((self._filters,)) \
+            if self._use_bias \
+            else numpy.zeros((self._filters,))
+
+        return new_layer
 
     def __call__(self, sample: numpy.ndarray) -> numpy.ndarray:
         if len(sample.shape) != 2:
@@ -108,8 +156,8 @@ class Conv1D(Layer):
 
 
 class Argmax(Layer):
-    def __init__(self, axis: int = -1, keepdims: bool = False, return_int: bool = False, shape: tuple[int, ...] = (0, 0)):
-        super().__init__(shape)
+    def __init__(self, axis: int = -1, keepdims: bool = False, return_int: bool = False):
+        super().__init__((0, 0))
 
         self._axis = axis
         self._keepdims = keepdims
@@ -120,3 +168,12 @@ class Argmax(Layer):
             return numpy.argmax(sample, axis=self._axis)[0]
         else:
             return numpy.argmax(sample, axis=self._axis, keepdims=self._keepdims)
+
+    def new_like_me(self) -> "Layer":
+        return copy.copy(self)
+
+    def __copy__(self) -> "Argmax":
+        return type(self)(self._axis, self._keepdims, self._return_int)
+
+    def __deepcopy__(self, memodict: dict) -> "Argmax":
+        return copy.copy(self)

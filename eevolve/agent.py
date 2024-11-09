@@ -127,9 +127,7 @@ class Agent:
         return self._rect.colliderect(agent.rect)
 
     def decide(self, observation: Iterable[Any], *args, **kwargs) -> Any:
-        self._brain.forward(observation, self, *args, **kwargs)
-
-        return self._brain.decide()
+        return self._brain(observation, self, *args, **kwargs)
 
     def die(self) -> None:
         self._is_dead = True
@@ -174,7 +172,7 @@ class Agent:
 
     def __deepcopy__(self, memodict) -> "Agent":
         new_agent = type(self)(self._agent_size, self._agent_position, self._agent_name,
-                               deepcopy(self._agent_surface), deepcopy(self._brain))
+                               deepcopy(self._agent_surface), self._brain.new_like_me())
 
         return new_agent
 
