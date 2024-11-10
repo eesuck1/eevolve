@@ -36,6 +36,7 @@ class Agent:
 
         self._agent_surface = Loader.load_surface(agent_surface, agent_size)
         self._rect = pygame.Rect(agent_position, agent_size)
+        self._sector_index = None
 
         self._brain = brain if brain is not None else Brain([])
         self._is_dead = False
@@ -159,6 +160,14 @@ class Agent:
     @is_dead.setter
     def is_dead(self, value: bool) -> None:
         self._is_dead = value
+
+    @property
+    def sector_index(self) -> tuple[int, int] | None:
+        return self._sector_index
+
+    @sector_index.setter
+    def sector_index(self, value: tuple[int, int]):
+        self._sector_index = value
 
     def __str__(self) -> str:
         return f"<{self._agent_name}: ({self.position[0]}, {self.position[1]})>"

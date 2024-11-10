@@ -4,6 +4,29 @@ from eevolve.constants import MAGNITUDE_EPSILON
 import numpy
 
 
+class Distance:
+    def __init__(self, value: float, from_to: tuple[Any, Any]) -> None:
+        self._value = value
+        self._from_to = from_to
+
+    @property
+    def value(self) -> float:
+        return self._value
+
+    @property
+    def from_to(self) -> tuple[Any, Any]:
+        return self._from_to
+
+    def __float__(self) -> float:
+        return self._value
+
+    def __str__(self) -> str:
+        return f"<Distance: from {self._from_to[0]} to {self._from_to[1]} is {self._value}>"
+
+    def __repr__(self) -> str:
+        return str(self)
+
+
 class Math:
     @staticmethod
     def clip(value: int | float, a: int | float, b: int | float) -> int | float:
@@ -36,7 +59,7 @@ class Math:
 
     @staticmethod
     def distance(a: Iterable[float | int] | numpy.ndarray | Any,
-                 b: Iterable[float | int] | numpy.ndarray | Any) -> float:
+                 b: Iterable[float | int] | numpy.ndarray | Any) -> Distance:
         if len(a) == 2 and all((isinstance(x, (float, int)) for x in a)):
             x_1, y_1 = a
         else:
@@ -49,11 +72,18 @@ class Math:
 
         distance = numpy.sqrt((x_2 - x_1) ** 2 + (y_2 - y_1) ** 2)
 
-        return distance if distance > 0 else MAGNITUDE_EPSILON
+        return Distance(distance, (a, b)) if distance > 0 else Distance(MAGNITUDE_EPSILON, (a, b))
 
     @staticmethod
     def distances(a: Iterable[float | int] | numpy.ndarray | Any,
                   b: Iterable[Iterable[float | int] | numpy.ndarray | Any] | Any) -> numpy.ndarray:
         return numpy.array([Math.distance(a, other)
+                            for other in b
+                            if a is not other])
+
+    @staticmethod
+    def distances_float(a: Iterable[float | int] | numpy.ndarray | Any,
+                        b: Iterable[Iterable[float | int] | numpy.ndarray | Any] | Any) -> numpy.ndarray:
+        return numpy.array([Math.distance(a, other).value
                             for other in b
                             if a is not other])

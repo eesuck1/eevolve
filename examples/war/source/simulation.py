@@ -20,7 +20,12 @@ class Simulation:
         for row in board.agents_board:
             for sector in row:
                 for agent_1 in sector:
-                    distances = eevolve.Math.distances(agent_1, sector)
+                    board.scan_around_agent(agent_1, 1)
+                    print(board.agents.get(agent_1))
+                    board.scan_distances_around_agent(agent_1, 1)
+                    print(board.agents.get(agent_1))
+
+                    distances = eevolve.Math.distances_float(agent_1, sector)
 
                     if len(distances) < 10:
                         distances = numpy.pad(distances, (0, 10 - len(distances)), mode="constant", constant_values=0.0)

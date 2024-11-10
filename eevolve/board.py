@@ -4,6 +4,7 @@ from typing import Iterable, Any
 import numpy
 
 from eevolve.agent import Agent
+from eevolve.eemath import Math
 
 
 class Board:
@@ -13,11 +14,11 @@ class Board:
         self._sectors_number = sectors_number
         self._display_size = (self._sector_width * self._sectors_number - 1,
                               self._sector_height * self._sectors_number - 1)
-        self._board = [[[] for _ in range(sectors_number)] for _ in range(sectors_number)]
-        self._agents = set()
+        self._board: list[list[list[Agent]]] = [[[] for _ in range(sectors_number)] for _ in range(sectors_number)]
         self._collided: list[tuple[Agent, Agent]] = []
         self._sector_pairs: list[tuple[Agent, Agent]] = []
         self._dead_agents: list[Agent] = []
+        self._agents: dict[Agent, list[Any]] = {}
 
         self.__string = ""
 
@@ -25,21 +26,22 @@ class Board:
         if agent in self._agents:
             return
         x, y = agent.position
+        x_i = x // self._sector_width
+        y_i = y // self._sector_height
 
-        self._board[x // self._sector_width][y // self._sector_height].append(agent)
-        self._agents.add(agent)
+        agent.sector_index = (x_i, y_i)
+
+        self._board[x_i][y_i].append(agent)
+        self._agents[agent] = []
 
     def remove_agent(self, agent: Agent) -> None:
         if agent not in self.agents:
             return
 
-        x, y = agent.position
-
-        x_i = x // self._sector_width
-        y_i = y // self._sector_height
+        x_i, y_i = agent.sector_index
 
         self._board[x_i][y_i].remove(agent)
-        self._agents.remove(agent)
+        self._agents.pop(agent, None)
 
     def move_agent(self, agent: Agent, delta: tuple[int | float, int | float] | Iterable[float | int]) -> None:
         if agent not in self._agents:
@@ -48,38 +50,41 @@ class Board:
         upper_x, upper_y = self._display_size
         agent_width, agent_height = agent.size
 
-        x0, y0 = agent.position
         agent.move_by(delta, (0, 0), (upper_x - agent_width, upper_y - agent_height))
         x1, y1 = agent.position
 
-        x0_i = x0 // self._sector_width
-        x1_i = x1 // self._sector_width
+        x0_i, y0_i = agent.sector_index
 
-        y0_i = y0 // self._sector_height
+        x1_i = x1 // self._sector_width
         y1_i = y1 // self._sector_height
 
-        if (x0_i != x1_i) or (y0_i != y1_i):
+        if (x0_i, y0_i) != (x1_i, y1_i):
             self._board[x0_i][y0_i].remove(agent)
             self._board[x1_i][y1_i].append(agent)
+
+            agent.sector_index = (x1_i, y1_i)
 
     def move_agent_toward(self, agent: Agent, point: Iterable[float | int] | numpy.ndarray | Any,
                           distance: float | int) -> None:
         if agent not in self._agents:
             return
 
-        x0, y0 = agent.position
-        agent.move_toward(point, distance, (0, 0), self._display_size)
+        upper_x, upper_y = self._display_size
+        agent_width, agent_height = agent.size
+
+        agent.move_toward(point, distance, (0, 0), (upper_x - agent_width, upper_y - agent_height))
         x1, y1 = agent.position
 
-        x0_i = x0 // self._sector_width
-        x1_i = x1 // self._sector_width
+        x0_i, y0_i = agent.sector_index
 
-        y0_i = y0 // self._sector_height
+        x1_i = x1 // self._sector_width
         y1_i = y1 // self._sector_height
 
-        if (x0_i != x1_i) or (y0_i != y1_i):
+        if (x0_i, y0_i) != (x1_i, y1_i):
             self._board[x0_i][y0_i].remove(agent)
             self._board[x1_i][y1_i].append(agent)
+
+            agent.sector_index = (x1_i, y1_i)
 
     def check_collision(self) -> None:
         self._collided.clear()
@@ -119,6 +124,66 @@ class Board:
             if agent.is_dead:
                 self._dead_agents.append(agent)
 
+    def scan_around_agent(self, agent: Agent, radius: int = 0, hold_previous: bool = False) -> None:
+        if radius < 0:
+            raise ValueError(f"Radius must be a non-negative integer. {radius} given instead!")
+        if agent not in self._agents:
+            return
+
+        x_i, y_i = agent.sector_index
+
+        agents = self._agents[agent]
+
+        if not hold_previous:
+            agents.clear()
+
+        if radius:
+            x_min = max(x_i - radius, 0)
+            x_max = min(x_i + radius, self._sectors_number)
+            y_min = max(y_i - radius, 0)
+            y_max = min(y_i + radius, self._sectors_number)
+
+            for i in range(x_min, x_max):
+                for j in range(y_min, y_max):
+                    agents.extend(self._board[i][j])
+        else:
+            agents.extend(self._board[x_i][y_i])
+
+        if agent in agents:
+            agents.remove(agent)
+
+    def scan_distances_around_agent(self, agent: Agent, radius: int = 0, hold_previous: bool = False) -> None:
+        if radius < 0:
+            raise ValueError(f"Radius must be a non-negative integer. {radius} given instead!")
+        if agent not in self._agents:
+            return
+
+        x_i, y_i = agent.sector_index
+
+        if radius:
+            x_min = max(x_i - radius, 0)
+            x_max = min(x_i + radius, self._sectors_number)
+            y_min = max(y_i - radius, 0)
+            y_max = min(y_i + radius, self._sectors_number)
+
+            distances = [
+                Math.distance(agent, other)
+                for i in range(x_min, x_max)
+                for j in range(y_min, y_max)
+                for other in self._board[i][j]
+                if other is not agent
+            ]
+        else:
+            distances = [Math.distance(agent, other)
+                         for other in self._board[x_i][y_i]
+                         if other is not agent]
+
+        agents = self._agents[agent]
+
+        if not hold_previous:
+            agents.clear()
+        agents.extend(distances)
+
     def __str__(self) -> str:
         self.__string = ""
         self.__string += "-" * 128 + "\n"
@@ -153,7 +218,7 @@ class Board:
         return self._board
 
     @property
-    def agents(self) -> set[Agent | Any]:
+    def agents(self) -> dict[Agent | Any, list[Any]]:
         return self._agents
 
     @property
