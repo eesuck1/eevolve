@@ -92,16 +92,25 @@ class Board:
         if len(self._agents) < 2:
             return
 
-        for row in self._board:
-            for sector in row:
-                if len(sector) < 2:
-                    continue
+        for agent in self._agents:
+            x0_i, y0_i = agent.sector_index
 
-                for pair in combinations(sector, 2):
-                    first, second = pair
+            x, y = agent.position
+            width, height = agent.size
 
-                    if first.is_collide(second):
-                        self._collided.append((first, second))
+            indexes_to_check = [(x0_i, y0_i)]
+
+            if x + width > x0_i * self._sector_width:
+                x0_i = min(x0_i + 1, self._sectors_number - 1)
+                indexes_to_check.append((x0_i, y0_i))
+            if y + height > y0_i * self._sector_height:
+                y0_i = min(y0_i + 1, self._sectors_number - 1)
+                indexes_to_check.append((x0_i, y0_i))
+
+            for i, j in indexes_to_check:
+                for other in self._board[i][j]:
+                    if agent is not other and agent.is_collide(other):
+                        self._collided.append((agent, other))
 
     def check_sector_pairs(self) -> None:
         self._sector_pairs.clear()

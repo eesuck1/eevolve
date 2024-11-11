@@ -21,9 +21,7 @@ class Simulation:
             for sector in row:
                 for agent_1 in sector:
                     board.scan_around_agent(agent_1, 1)
-                    print(board.agents.get(agent_1))
                     board.scan_distances_around_agent(agent_1, 1)
-                    print(board.agents.get(agent_1))
 
                     distances = eevolve.Math.distances_float(agent_1, sector)
 
