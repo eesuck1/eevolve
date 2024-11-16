@@ -166,6 +166,13 @@ class PairTask(Task):
         super().__init__(function, period_ms, execution_number, priority, *args, **kwargs)
 
 
+class PairMovementTask(Task):
+    def __init__(self, function: Callable[[tuple[Agent | Any, Agent | Any], float], None], period_ms: int,
+                 execution_number: int = -1,
+                 priority: int = HIGHEST_TASK_PRIORITY, *args, **kwargs):
+        super().__init__(function, period_ms, execution_number, priority, *args, **kwargs)
+
+
 class BorderCollisionTask(Task):
     def __init__(self, function: Callable[[Agent | Any], None], period_ms: int, execution_number: int = -1,
                  priority: int = HIGHEST_TASK_PRIORITY, *args, **kwargs):

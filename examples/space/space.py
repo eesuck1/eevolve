@@ -2,7 +2,7 @@ from examples.space.source.simulation import Simulation
 
 
 def run() -> None:
-    simulation = Simulation(100)
+    simulation = Simulation(50)
     simulation.run()
 
 

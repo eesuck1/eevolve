@@ -9,7 +9,7 @@ from eevolve.agent import Agent
 from eevolve.board import Board
 from eevolve.generator import PositionGenerator, ColorGenerator
 from eevolve.task import Task, FrameEndTask, CollisionTask, AgentTask, BoardTask, PairTask, BorderCollisionTask, \
-    AgentMovementTask
+    AgentMovementTask, PairMovementTask
 from eevolve.loader import Loader
 from eevolve.constants import TOP_LEFT, LOWEST_TASK_PRIORITY, HIGHEST_TASK_PRIORITY, DEFAULT_FONT, \
     DEFAULT_FONT_SCALE_FACTOR, DEFAULT_FONT_COLOR, RED_COLOR
@@ -91,10 +91,10 @@ class Game:
             self._draw_velocities()
 
     def _board_task_handler(self) -> None:
+        self._board.decrease_timeout(self._delta_time_ms)
+        self._board.move_agents(self._delta_time)
         self._board.check_collision()
         self._board.check_sector_pairs()
-        self._board.move_agents(self._delta_time)
-        self._board.decrease_timeout(self._delta_time_ms)
 
     def _do_tasks(self) -> None:
         to_remove = []
@@ -114,6 +114,9 @@ class Game:
                     elif isinstance(task, AgentMovementTask):
                         for agent in self._board.agents:
                             task(agent, task.timer_seconds)
+                    elif isinstance(task, PairMovementTask):
+                        for pair in self._board.sector_pairs:
+                            task(pair, task.timer_seconds)
                     elif isinstance(task, BorderCollisionTask):
                         for agent in filter(lambda x: x.colliding_border, self._board.agents):
                             task(agent)
