@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Any, Sequence
+from typing import Any, Sequence, Union
 
 import numpy
 import pygame
@@ -40,6 +40,7 @@ class Agent:
         self._brain = brain if brain is not None else Brain([])
         self._is_dead = False
         self._is_colliding_border = False
+        self._colliding: Union["Agent", None, Any] = None
         self._colliding_directions = []
 
         self._velocity = numpy.zeros((2,), dtype=float)
@@ -221,6 +222,10 @@ class Agent:
         self._velocity = value
 
     @property
+    def velocity_norm(self) -> float:
+        return numpy.sqrt((self._velocity ** 2).sum())
+
+    @property
     def colliding_border(self) -> bool:
         return self._is_colliding_border
 
@@ -235,6 +240,14 @@ class Agent:
     @collision_directions.setter
     def collision_directions(self, value: list[int, ...]) -> None:
         self._colliding_directions = value
+
+    @property
+    def colliding(self) -> Union["Agent", None, Any]:
+        return self._colliding
+
+    @colliding.setter
+    def colliding(self, value: Union["Agent", None, Any]) -> None:
+        self._colliding = value
 
     def __str__(self) -> str:
         return f"<{self._agent_name}: ({self.position[0]}, {self.position[1]})>"

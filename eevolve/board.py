@@ -1,14 +1,17 @@
 import math
-from itertools import combinations
+from itertools import combinations, chain, product
 from typing import Any, Sequence
 
+import numpy
+
+import eevolve
 from eevolve.agent import Agent
 from eevolve.eemath import Math
 
 
 class Board:
     def __init__(self, sector_size: tuple[int | float, int | float] = (0, 0),
-                 sectors_number: int = -1, collision_timeout: int = 750) -> None:
+                 sectors_number: int = -1, collision_timeout: int = 250) -> None:
         self._sector_width, self._sector_height = sector_size
         self._sectors_number = sectors_number
         self._display_size = (self._sector_width * self._sectors_number - 1,
@@ -86,24 +89,23 @@ class Board:
             indexes_to_check = [(x0_i, y0_i)]
 
             if x + width > x0_i * self._sector_width:
-                x0_i = min(x0_i + 1, self._sectors_number - 1)
+                x0_i = min(x0_i + 1, self._sectors_number - 1 )
                 indexes_to_check.append((x0_i, y0_i))
             if y + height > y0_i * self._sector_height:
                 y0_i = min(y0_i + 1, self._sectors_number - 1)
                 indexes_to_check.append((x0_i, y0_i))
 
-            for i, j in indexes_to_check:
-                for other in self._board[i][j]:
-                    if agent is other:
-                        continue
+            for other in filter(lambda other_agent: other_agent is not agent,
+                                chain(*(self._board[i][j] for i, j in indexes_to_check))):
+                if agent.is_collide(other):
+                    if (not self._collision_timer.get(agent, 0) or
+                            not self._collision_timer.get(other, 0)):
+                        self._collided.append((agent, other))
 
-                    if agent.is_collide(other):
-                        if (not self._collision_timer.get(agent, 0) or
-                                not self._collision_timer.get(other, 0)):
-                            self._collided.append((agent, other))
+                        distance = Math.distance(agent.rect.center, other.rect.center)
 
-                            self._collision_timer[agent] = self._collision_timeout
-                            self._collision_timer[other] = self._collision_timeout
+                        self._collision_timer[agent] = math.ceil(distance / agent.velocity_norm * 1000.0)
+                        self._collision_timer[other] = math.ceil(distance / other.velocity_norm * 1000.0)
 
     def decrease_timeout(self, dt: int) -> None:
         for agent in self._collision_timer:

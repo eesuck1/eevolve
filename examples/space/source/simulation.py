@@ -15,8 +15,12 @@ class Simulation:
         self._agents_number = agents_number
 
     @staticmethod
-    def movement_handler(agent: SpaceAgent, dt: float) -> None:
+    def init_movement_handler(agent: SpaceAgent, dt: float) -> None:
         agent.accelerate_by(agent.velocity * dt)
+
+    @staticmethod
+    def movement_handler(agent: SpaceAgent, dt: float) -> None:
+        agent.accelerate_by(numpy.array((0.0, 720 * dt)))
 
     @staticmethod
     def init_mass_handler(agent: SpaceAgent) -> None:
@@ -58,7 +62,9 @@ class Simulation:
         # TODO: Also it is good approach to create some variables and then add internal Tasks to perform actions
 
         tasks = (
-            eevolve.AgentMovementTask(self.movement_handler, 0, execution_number=1,
+            eevolve.AgentMovementTask(self.init_movement_handler, 0, execution_number=1,
+                                      priority=eevolve.HIGHEST_TASK_PRIORITY + 2),
+            eevolve.AgentMovementTask(self.movement_handler, 0,
                                       priority=eevolve.HIGHEST_TASK_PRIORITY + 2),
             eevolve.BorderCollisionTask(self.board_handler, 0, priority=eevolve.HIGHEST_TASK_PRIORITY + 2),
             eevolve.CollisionTask(self.collision_handler, 0, priority=eevolve.HIGHEST_TASK_PRIORITY + 2),
@@ -69,7 +75,7 @@ class Simulation:
         agent_generators = {
             "size": eevolve.NumbersGenerator.hypercube_generator(self._agents_number, 2, 10.0, 10.0, dtype=int),
             "velocity": eevolve.NumbersGenerator.normal_generator(self._agents_number, shape=(2,), offset=0.0,
-                                                                  scaler=15.0),
+                                                                  scaler=30.0),
         }
 
         self._game.add_tasks(tasks)
