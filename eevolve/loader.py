@@ -59,13 +59,20 @@ class Loader:
             try:
                 image = pygame.image.load(surface)
 
+                if not all(desired_size):
+                    desired_size = image.size
+
                 if image.get_flags() & pygame.SRCALPHA:
                     result = pygame.transform.scale(image, desired_size).convert_alpha()
                 else:
                     result = pygame.transform.scale(image, desired_size).convert()
             except pygame.error:
+                print(pygame.error)
                 raise ValueError("Surface image could not be loaded.")
         elif isinstance(surface, pygame.Surface):
+            if not all(desired_size):
+                desired_size = surface.size
+
             result = pygame.transform.scale(surface, desired_size).convert_alpha() \
                 if surface.get_flags() & pygame.SRCALPHA \
                 else pygame.transform.scale(surface, desired_size).convert()
@@ -73,6 +80,7 @@ class Loader:
             try:
                 result = pygame.surfarray.make_surface(surface).convert()
             except pygame.error:
+                print(pygame.error)
                 raise ValueError("Surface image could not be loaded.")
         else:
             raise ValueError("Surface image could not be loaded.")

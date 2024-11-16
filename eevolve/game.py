@@ -1,6 +1,6 @@
 import math
 import sys
-from typing import Iterable
+from typing import Sequence
 
 import numpy
 import pygame
@@ -8,10 +8,11 @@ import pygame
 from eevolve.agent import Agent
 from eevolve.board import Board
 from eevolve.generator import PositionGenerator, ColorGenerator
-from eevolve.task import Task, FrameEndTask, CollisionTask, AgentTask, BoardTask, PairTask
+from eevolve.task import Task, FrameEndTask, CollisionTask, AgentTask, BoardTask, PairTask, BorderCollisionTask, \
+    AgentMovementTask
 from eevolve.loader import Loader
 from eevolve.constants import TOP_LEFT, LOWEST_TASK_PRIORITY, HIGHEST_TASK_PRIORITY, DEFAULT_FONT, \
-    DEFAULT_FONT_SCALE_FACTOR, DEFAULT_FONT_COLOR
+    DEFAULT_FONT_SCALE_FACTOR, DEFAULT_FONT_COLOR, RED_COLOR
 
 pygame.init()
 pygame.font.init()
@@ -27,6 +28,7 @@ class Game:
                  draw_sectors: bool = False,
                  draw_time: bool = True,
                  reset_on: bool = True,
+                 draw_velocities: bool = False,
                  fps_limit: int = 300):
         self._task_priorities = LOWEST_TASK_PRIORITY - HIGHEST_TASK_PRIORITY + 1
 
@@ -41,6 +43,7 @@ class Game:
         self._agents_list = []
         self._tasks: list[list[Task]] = [[] for _ in range(self._task_priorities)]
 
+        self._delta_time_ms = 0
         self._delta_time = 0.0
         self._time = 0.0
 
@@ -55,6 +58,7 @@ class Game:
 
         self._to_draw_sectors = draw_sectors
         self._to_draw_time = draw_time
+        self._to_draw_velocities = draw_velocities
 
         self._font = pygame.font.SysFont(DEFAULT_FONT, screen_size[0] // DEFAULT_FONT_SCALE_FACTOR)
         self._font_position = (screen_size[0] // DEFAULT_FONT_SCALE_FACTOR, screen_size[1] // DEFAULT_FONT_SCALE_FACTOR)
@@ -70,8 +74,7 @@ class Game:
 
     def _init_internal_tasks(self) -> None:
         self.add_task(FrameEndTask(self._timer, priority=HIGHEST_TASK_PRIORITY))
-        self.add_task(FrameEndTask(self._board.check_collision, priority=HIGHEST_TASK_PRIORITY))
-        self.add_task(FrameEndTask(self._board.check_sector_pairs, priority=HIGHEST_TASK_PRIORITY))
+        self.add_task(FrameEndTask(self._board_task_handler, priority=HIGHEST_TASK_PRIORITY))
         self.add_task(FrameEndTask(self._check_dead, priority=LOWEST_TASK_PRIORITY))
         self.add_task(FrameEndTask(self._draw, priority=LOWEST_TASK_PRIORITY))
         self.add_task(FrameEndTask(self._update_display, priority=LOWEST_TASK_PRIORITY))
@@ -84,13 +87,21 @@ class Game:
 
         if self._to_draw_sectors:
             self._draw_sectors()
+        if self._to_draw_velocities:
+            self._draw_velocities()
+
+    def _board_task_handler(self) -> None:
+        self._board.check_collision()
+        self._board.check_sector_pairs()
+        self._board.move_agents(self._delta_time)
+        self._board.decrease_timeout(self._delta_time_ms)
 
     def _do_tasks(self) -> None:
         to_remove = []
 
         for priority in range(self._task_priorities):
             for task in self._tasks[priority]:
-                task.timer += self._delta_time
+                task.timer += self._delta_time_ms
 
                 if task.timer >= task.period:
 
@@ -100,11 +111,17 @@ class Game:
                     elif isinstance(task, AgentTask):
                         for agent in self._board.agents:
                             task(agent)
+                    elif isinstance(task, AgentMovementTask):
+                        for agent in self._board.agents:
+                            task(agent, task.timer_seconds)
+                    elif isinstance(task, BorderCollisionTask):
+                        for agent in filter(lambda x: x.colliding_border, self._board.agents):
+                            task(agent)
                     elif isinstance(task, BoardTask):
                         task(self._board)
                     elif isinstance(task, PairTask):
                         for pair in self._board.sector_pairs:
-                            task(pair)
+                            task(pair, task.timer_seconds)
                     elif isinstance(task, FrameEndTask):
                         task()
                     else:
@@ -124,8 +141,9 @@ class Game:
 
             for i in range(self._sectors_number):
                 for j in range(self._sectors_number):
-                    self._sector_rects.append(pygame.Rect((i * width, j * height), (width, height)))
+                    self._sector_rects.append(pygame.FRect((i * width, j * height), (width, height)))
 
+        if len(self._sector_colors) == 0:
             for color in ColorGenerator.random(self._sectors_number ** 2):
                 self._sector_colors.append(color)
 
@@ -138,6 +156,13 @@ class Game:
 
                 for agent in sector:
                     pygame.draw.rect(self._display, color, agent.rect, width=1)
+
+    def _draw_velocities(self) -> None:
+        for index, agent in enumerate(self._board.agents):
+            x, y = agent.rect.center
+            v_x, v_y = agent.velocity
+
+            pygame.draw.line(self._display, RED_COLOR, (x, y), (x + v_x, y + v_y), 3)
 
     def _check_dead(self) -> None:
         self._board.check_dead()
@@ -157,8 +182,9 @@ class Game:
         pygame.display.update()
 
     def _timer(self) -> None:
-        self._delta_time = self._clock.get_time()
-        self._time += self._delta_time
+        self._delta_time_ms = self._clock.get_time()
+        self._delta_time = self._delta_time_ms / 1000.0
+        self._time += self._delta_time_ms
 
     def run(self) -> None:
         self._init_internal_tasks()
@@ -180,6 +206,8 @@ class Game:
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_s:
                         self._to_draw_sectors = not self._to_draw_sectors
+                    if event.key == pygame.K_v:
+                        self._to_draw_velocities = not self._to_draw_velocities
 
             self._do_tasks()
 
@@ -189,23 +217,23 @@ class Game:
 
         self._tasks[task.priority].append(task)
 
-    def add_tasks(self, tasks: Iterable[Task]) -> None:
+    def add_tasks(self, tasks: Sequence[Task]) -> None:
         for task in tasks:
             self.add_task(task)
 
     def remove_task(self, task: Task) -> None:
-        if task not in self._tasks:
+        if task not in self._tasks[task.priority]:
             print(f"[WARNING] Trying to remove {task} which not in tasks list!")
             return
 
         self._tasks[task.priority].remove(task)
 
-    def remove_tasks(self, tasks: Iterable[Task]) -> None:
+    def remove_tasks(self, tasks: Sequence[Task]) -> None:
         for task in tasks:
             self.remove_task(task)
 
-    def add_agents(self, copies_number: int, agent_generator: Iterable[Agent],
-                   position_generator: Iterable[tuple[int | float, int | float] | numpy.ndarray] = None) -> None:
+    def add_agents(self, copies_number: int, agent_generator: Sequence[Agent],
+                   position_generator: Sequence[tuple[int | float, int | float] | numpy.ndarray] = None) -> None:
         if position_generator is None:
             position_generator = PositionGenerator.uniform(self, copies_number)
 
@@ -249,5 +277,5 @@ class Game:
         return self._board.collided
 
     @property
-    def agents(self) -> Iterable[Agent]:
+    def agents(self) -> Sequence[Agent]:
         return self._board.agents

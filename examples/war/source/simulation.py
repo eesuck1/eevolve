@@ -1,8 +1,12 @@
+import copy
 import os
+from typing import Any
 
 import numpy
 
 import eevolve
+from eevolve import Agent
+
 from examples.war.source.agent import WarAgent
 from examples.war.source.constants import *
 
@@ -13,13 +17,16 @@ class Simulation:
                                   os.path.join(ASSETS_PATH, "bg.png"), SECTORS_NUMBER)
 
         self._field_size = field_size
-        self._mapping = [(0, -3), (3, 0), (3, 0), (-3, 0)]
+        self._mapping = [(i, j) for i in range(-1, 2) for j in range(-1, 2)]
 
     @staticmethod
     def movement_task_handler(board: eevolve.Board) -> None:
         for row in board.agents_board:
             for sector in row:
                 for agent_1 in sector:
+                    if agent_1.is_fighting:
+                        continue
+
                     board.scan_around_agent(agent_1, 1)
                     board.scan_distances_around_agent(agent_1, 1)
 
@@ -34,21 +41,41 @@ class Simulation:
                     board.move_agent(agent_1, agent_1.decide(distances))
 
     @staticmethod
-    def collision_handler(board: eevolve.Board) -> None:
-        for pair in board.collided:
-            agent_1, agent_2 = pair
+    def collision_handler(pair: tuple[WarAgent, WarAgent] | Any) -> None:
+        agent_1, agent_2 = pair
 
-            if agent_1.color != agent_2.color:
-                board.remove_agent(agent_1)
-                board.remove_agent(agent_2)
-            else:
-                board.move_agent_toward(agent_1, agent_2, -5)
-                board.move_agent_toward(agent_2, agent_1, -5)
+        if agent_1.color != agent_2.color:
+            agent_1.fight(agent_2)
+
+    @staticmethod
+    def agent_handler(agent: WarAgent | Agent) -> None:
+        agent.brain.mutate()
+
+    @staticmethod
+    def reproduce_handler(board: eevolve.Board) -> None:
+        to_add = []
+
+        for agent in board.agents:
+            if agent.can_reproduce:
+                agent.reproduced()
+
+                for _ in range(2):
+                    new_agent = copy.deepcopy(agent)
+                    new_agent.brain.mutate()
+                    new_agent.health *= eevolve.NumbersGenerator.uniform(offset=0.5)
+                    new_agent.damage *= eevolve.NumbersGenerator.uniform(offset=0.5)
+
+                    to_add.append(new_agent)
+
+        board.add_agents(to_add)
+
+        for agent in to_add:
+            board.move_agent(agent, eevolve.NumbersGenerator.normal((2,), 100.0, 100.0))
 
     def init_agents(self) -> None:
         agents_number = self._field_size // 2
 
-        agent_size = (8, 8)
+        agent_size = (4, 4)
         agent_surface_blue = os.path.join(ASSETS_PATH, "blue.png")
         agent_surface_red = os.path.join(ASSETS_PATH, "red.png")
 
@@ -56,7 +83,7 @@ class Simulation:
         brain.add_layers([
             eevolve.Dense((10, 8), activation=eevolve.Relu()),
             eevolve.Dense((8, 8), activation=eevolve.Relu()),
-            eevolve.Dense((8, 4), activation=eevolve.Softmax()),
+            eevolve.Dense((8, len(self._mapping)), activation=eevolve.Softmax()),
             eevolve.Argmax(return_int=True),
         ])
 
@@ -67,21 +94,24 @@ class Simulation:
 
         self._game.add_agents(agents_number,
                               eevolve.AgentGenerator.like(
-                                  agent_blue, agents_number, name_pattern=lambda index: f"Blue_{index}"),
-                              eevolve.PositionGenerator.even(
-                                  self._game, agents_number, upper=(width // 3, height * 9 // 10)))
+                                  agent_blue, agents_number, name_pattern=lambda index: f"Blue_{index}"))
 
         self._game.add_agents(agents_number,
                               eevolve.AgentGenerator.like(
-                                  agent_red, agents_number, name_pattern=lambda index: f"Red_{index}"),
-                              eevolve.PositionGenerator.even(
-                                  self._game, agents_number, lower=(width // 1.5, height // 10)))
+                                  agent_red, agents_number, name_pattern=lambda index: f"Red_{index}"))
+
+        # eevolve.PositionGenerator.even(
+        #     self._game, agents_number, upper=(width // 3, height * 9 // 10))
+        # eevolve.PositionGenerator.even(
+        #     self._game, agents_number, lower=(width // 1.5, height // 10))
 
     def init_tasks(self) -> None:
-        movement_task = eevolve.BoardTask(self.movement_task_handler, 50, priority=1)
-        collision_task = eevolve.BoardTask(self.collision_handler, 0, priority=1)
+        movement_task = eevolve.BoardTask(self.movement_task_handler, 50, priority=2)
+        collision_task = eevolve.CollisionTask(self.collision_handler, 50, priority=1)
+        reproduce_task = eevolve.BoardTask(self.reproduce_handler, 0, priority=2)
+        agent_task = eevolve.AgentTask(self.agent_handler, 1500, priority=2)
 
-        self._game.add_tasks((movement_task, collision_task))
+        self._game.add_tasks((movement_task, collision_task, reproduce_task, agent_task))
 
     def run(self) -> None:
         self.init_agents()

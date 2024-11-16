@@ -1,4 +1,4 @@
-from typing import Any, Iterable
+from typing import Any, Sequence
 from eevolve.constants import MAGNITUDE_EPSILON
 
 import numpy
@@ -18,7 +18,7 @@ class Distance:
         return self._from_to
 
     def __float__(self) -> float:
-        return self._value
+        return float(self._value)
 
     def __str__(self) -> str:
         return f"<Distance: from {self._from_to[0]} to {self._from_to[1]} is {self._value}>"
@@ -29,7 +29,8 @@ class Distance:
 
 class Math:
     @staticmethod
-    def clip(value: int | float, a: int | float, b: int | float) -> int | float:
+    def clip(value: int | float | Any, a: int | float, b: int | float,
+             return_bool: bool = False) -> int | float | tuple[int | float, bool]:
         """
         Clamps a given value between two bounds.
 
@@ -37,6 +38,7 @@ class Math:
 
         clamped_value = Loader.clip(10, 0, 5)
 
+        :param return_bool:
         :param value:
             The value to be clamped.
 
@@ -52,14 +54,21 @@ class Math:
             or the original value if it lies within the bounds.
         """
 
-        value = a if value < a else value
-        value = b if value > b else value
+        if a > b:
+            raise ValueError(f"Lower bound must not be greater than upper. {a} vs {b} given instead!")
 
-        return value
+        if value < a:
+            clamped_value, out_of_bounds = a, True
+        elif value > b:
+            clamped_value, out_of_bounds = b, True
+        else:
+            clamped_value, out_of_bounds = value, False
+
+        return (clamped_value, out_of_bounds) if return_bool else clamped_value
 
     @staticmethod
-    def distance(a: Iterable[float | int] | numpy.ndarray | Any,
-                 b: Iterable[float | int] | numpy.ndarray | Any) -> Distance:
+    def distance(a: Sequence[float | int] | numpy.ndarray | Any,
+                 b: Sequence[float | int] | numpy.ndarray | Any) -> float:
         if len(a) == 2 and all((isinstance(x, (float, int)) for x in a)):
             x_1, y_1 = a
         else:
@@ -72,18 +81,18 @@ class Math:
 
         distance = numpy.sqrt((x_2 - x_1) ** 2 + (y_2 - y_1) ** 2)
 
-        return Distance(distance, (a, b)) if distance > 0 else Distance(MAGNITUDE_EPSILON, (a, b))
+        return distance if distance > 0 else MAGNITUDE_EPSILON
 
     @staticmethod
-    def distances(a: Iterable[float | int] | numpy.ndarray | Any,
-                  b: Iterable[Iterable[float | int] | numpy.ndarray | Any] | Any) -> numpy.ndarray:
+    def distances(a: Sequence[float | int] | numpy.ndarray | Any,
+                  b: Sequence[Sequence[float | int] | numpy.ndarray | Any] | Any) -> numpy.ndarray:
         return numpy.array([Math.distance(a, other)
                             for other in b
                             if a is not other])
 
     @staticmethod
-    def distances_float(a: Iterable[float | int] | numpy.ndarray | Any,
-                        b: Iterable[Iterable[float | int] | numpy.ndarray | Any] | Any) -> numpy.ndarray:
+    def distances_float(a: Sequence[float | int] | numpy.ndarray | Any,
+                        b: Sequence[Sequence[float | int] | numpy.ndarray | Any] | Any) -> numpy.ndarray:
         return numpy.array([Math.distance(a, other).value
                             for other in b
                             if a is not other])

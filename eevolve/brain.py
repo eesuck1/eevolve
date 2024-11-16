@@ -1,5 +1,5 @@
 import copy
-from typing import Iterable, Any, Callable
+from typing import Sequence, Any, Callable
 
 import numpy
 
@@ -7,7 +7,7 @@ from eevolve.layers import Layer
 
 
 class Brain:
-    def __init__(self, mapping: Iterable[Any] | dict[float | int, Any] | Callable):
+    def __init__(self, mapping: Sequence[Any] | dict[float | int, Any] | Callable):
         self._mapping = mapping
         self._output = None
         self._decision = None
@@ -24,7 +24,7 @@ class Brain:
         for layer in layers:
             self.add_layer(layer)
 
-    def forward(self, observation: Iterable[Any] | numpy.ndarray | Any, owner: Any = None,
+    def forward(self, observation: Sequence[Any] | numpy.ndarray | Any, owner: Any = None,
                 output_function: Callable[[numpy.ndarray], Any] = lambda x: x, *args, **kwargs) -> None:
         observation = numpy.array(observation, dtype=float)
 
@@ -85,7 +85,7 @@ class Brain:
     def layers(self) -> list[Layer]:
         return self._layers
 
-    def __call__(self, observation: Iterable[Any] | numpy.ndarray | Any, owner: Any = None,
+    def __call__(self, observation: Sequence[Any] | numpy.ndarray | Any, owner: Any = None,
                  output_function: Callable[[numpy.ndarray], Any] = lambda x: x, *args, **kwargs) -> Any:
         self.forward(observation, owner, output_function, *args, **kwargs)
 

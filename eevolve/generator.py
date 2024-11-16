@@ -1,5 +1,4 @@
-import copy
-from typing import Any, Callable, Iterable
+from typing import Any, Callable, Sequence
 
 import numpy
 import pygame
@@ -9,7 +8,7 @@ from eevolve import Brain, Agent
 
 class PositionGenerator:
     @staticmethod
-    def uniform(game: Any, number: int) -> Iterable[numpy.ndarray]:
+    def uniform(game: Any, number: int) -> Sequence[numpy.ndarray] | Any:
         """
         Generates a specified number of randomly generated uniformly distributed pairs of coordinates.
 
@@ -32,8 +31,8 @@ class PositionGenerator:
 
     @staticmethod
     def even(game: Any, number: int, offset_scaler: int = 10,
-             lower: tuple[float | int, float | int] = None, upper: tuple[float | int, float | int] = None) -> Iterable[
-        numpy.ndarray]:
+             lower: tuple[float | int, float | int] = None, upper: tuple[float | int, float | int] = None) -> Sequence[
+             numpy.ndarray]:
         """
         Generates a specified number of evenly distributed coordinate pairs, considering an offset scaler.
 
@@ -67,7 +66,7 @@ class PositionGenerator:
                 dividers.append(i)
 
         x, y = numpy.mgrid[lower[0]:upper[0]:dividers[len(dividers) // 2] * 1j,
-               lower[1]:upper[1]:number / dividers[len(dividers) // 2] * 1j]
+                           lower[1]:upper[1]:number / dividers[len(dividers) // 2] * 1j]
 
         for pair in numpy.column_stack((x.ravel(), y.ravel())):
             yield pair
@@ -86,7 +85,7 @@ class AgentGenerator:
                 surface: str | pygame.Surface | numpy.ndarray = None,
                 position: tuple[int | float, int | float] = None,
                 name_pattern: Callable[[int], str] = None,
-                brain: Brain = None) -> Iterable[Agent]:
+                brain: Brain = None) -> Sequence[Agent]:
         """
         Generates a specified number of Agents with default or customized attributes.
 
@@ -128,10 +127,10 @@ class AgentGenerator:
 
         for index in range(number):
             agent.name = name_pattern(index)
-            yield copy.deepcopy(agent)
+            yield agent.new_like_me()
 
     @staticmethod
-    def like(agent: Agent, number: int, name_pattern: Callable[[int], str] = None) -> Iterable[Agent]:
+    def like(agent: Agent, number: int, name_pattern: Callable[[int], str] = None) -> Sequence[Agent]:
         """
         Generates a specified number of agents as deepcopy of given 'base' Agent.
         :param agent: 'base' Agent instance
@@ -157,7 +156,23 @@ class AgentGenerator:
 
         for index in range(number):
             agent.name = name_pattern(index)
-            yield copy.deepcopy(agent)
+            yield agent.new_like_me()
+
+    @staticmethod
+    def like_with_generators(agent: Agent, number: int, generators: dict[str, Any],
+                             name_pattern: Callable[[int], str] = None) -> Sequence[Agent]:
+        if name_pattern is None:
+            name_pattern = lambda i: f"{AgentGenerator.DEFAULT_NAME}_{i}"
+
+        # TODO:
+
+        for index in range(number):
+            agent.name = name_pattern(index)
+
+            for attribute, generator in generators.items():
+                setattr(agent, attribute, next(generator))
+
+            yield agent.new_like_me()
 
 
 class ColorGenerator:

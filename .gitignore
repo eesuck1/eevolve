@@ -6,3 +6,4 @@ venv/
 eevolve/__pycache__/
 tests/
 examples/*/*/__pycache__/
+examples/war

@@ -23,12 +23,12 @@ class Task:
 
     def frame_end_task_handler(game: Game) -> None:
         if len(game.agents) == 0:
-            game.add_agents(10, AgentGenerator.default(game, 10))
+            game.add_agents(10, Agent | AnyGenerator.default(game, 10))
 
-    def agent_task_handler(agent: Agent) -> None:
+    def agent_task_handler(agent: Agent | Any) -> None:
         agent.move_by((5, 5))
 
-    def collision_task_handler(collision_pair: tuple[Agent, Agent]) -> None:
+    def collision_task_handler(collision_pair: tuple[Agent | Any, Agent | Any]) -> None:
         agent_1, agent_2 = collision_pair
 
         print(f"{agent_1} collide {agent_2}")
@@ -39,7 +39,7 @@ class Task:
 
     frame_end_task = FrameEndTask(frame_end_task_handler, 2500, game)
 
-    agent_task = AgentTask(agent_task_handler, 500)
+    agent_task = Agent | AnyTask(agent_task_handler, 500)
 
     collision_task = CollisionTask(collision_task_handler, 0)
 
@@ -94,6 +94,14 @@ class Task:
         self._timer = value
 
     @property
+    def timer_seconds(self) -> float:
+        return self._timer / 1000.0
+
+    @timer_seconds.setter
+    def timer_seconds(self, value: float) -> None:
+        self._timer = value
+
+    @property
     def is_dead(self) -> bool:
         return self._execution_number == 0
 
@@ -121,13 +129,20 @@ class Task:
 
 
 class CollisionTask(Task):
-    def __init__(self, function: Callable[[tuple[Agent, Agent]], None], period_ms: int, execution_number: int = -1,
+    def __init__(self, function: Callable[[tuple[Agent | Any, Agent | Any]], None], period_ms: int,
+                 execution_number: int = -1,
                  priority: int = HIGHEST_TASK_PRIORITY, *args, **kwargs) -> None:
         super().__init__(function, period_ms, execution_number, priority, *args, **kwargs)
 
 
 class AgentTask(Task):
-    def __init__(self, function: Callable[[Agent], None], period_ms: int, execution_number: int = -1,
+    def __init__(self, function: Callable[[Agent | Any], None], period_ms: int, execution_number: int = -1,
+                 priority: int = HIGHEST_TASK_PRIORITY, *args, **kwargs):
+        super().__init__(function, period_ms, execution_number, priority, *args, **kwargs)
+
+
+class AgentMovementTask(Task):
+    def __init__(self, function: Callable[[Agent | Any, float], Any], period_ms: int, execution_number: int = -1,
                  priority: int = HIGHEST_TASK_PRIORITY, *args, **kwargs):
         super().__init__(function, period_ms, execution_number, priority, *args, **kwargs)
 
@@ -145,6 +160,13 @@ class BoardTask(Task):
 
 
 class PairTask(Task):
-    def __init__(self, function: Callable[[tuple[Agent, Agent]], None], period_ms: int, execution_number: int = -1,
+    def __init__(self, function: Callable[[tuple[Agent | Any, Agent | Any], float], None], period_ms: int,
+                 execution_number: int = -1,
+                 priority: int = HIGHEST_TASK_PRIORITY, *args, **kwargs):
+        super().__init__(function, period_ms, execution_number, priority, *args, **kwargs)
+
+
+class BorderCollisionTask(Task):
+    def __init__(self, function: Callable[[Agent | Any], None], period_ms: int, execution_number: int = -1,
                  priority: int = HIGHEST_TASK_PRIORITY, *args, **kwargs):
         super().__init__(function, period_ms, execution_number, priority, *args, **kwargs)
