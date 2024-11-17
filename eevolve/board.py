@@ -1,15 +1,15 @@
 import math
 
 from itertools import combinations, chain
-from typing import Any, Sequence
+from typing import Any, Sequence, Callable
 
 from eevolve.agent import Agent
 from eevolve.eemath import Math
 
 
 class Board:
-    def __init__(self, sector_size: tuple[int | float, int | float] = (0, 0),
-                 sectors_number: int = -1, collision_timeout: int = 250) -> None:
+    def __init__(self, sector_size: tuple[int | float, int | float] = (0, 0), sectors_number: int = -1,
+                 collision_timeout: Callable[[Agent | Any, Agent | Any], int] | int | float = None) -> None:
         self._sector_width, self._sector_height = sector_size
         self._sectors_number = sectors_number
         self._display_size = (self._sector_width * self._sectors_number - 1,
@@ -17,10 +17,19 @@ class Board:
         self._board: list[list[list[Agent]]] = [[[] for _ in range(sectors_number)] for _ in range(sectors_number)]
         self._collided: list[tuple[Agent, Agent]] = []
         self._collision_timer: dict[tuple[Agent, Agent], int] = {}
-        self._collision_timeout = collision_timeout
         self._sector_pairs: list[tuple[Agent, Agent]] = []
         self._dead_agents: list[Agent] = []
         self._agents: dict[Agent, list[Any]] = {}
+
+        if collision_timeout is None:
+            self._collision_timeout = lambda x, y: 250
+        elif isinstance(collision_timeout, (int, float)):
+            self._collision_timeout = lambda x, y: math.ceil(collision_timeout)
+        elif isinstance(collision_timeout, Callable):
+            self._collision_timeout = collision_timeout
+        else:
+            raise ValueError(f"`collision_timeout` must be function that takes [Agent, Agent] and return timeout "
+                             f"or constant timeout value (int or float). {type(collision_timeout)} given instead!")
 
         self.__string = ""
 
@@ -58,6 +67,7 @@ class Board:
         x0_i, y0_i = agent.sector_index
 
         x1, y1 = agent.position
+
         x1_i = math.floor(x1 / self._sector_width)
         y1_i = math.floor(y1 / self._sector_height)
 
@@ -99,8 +109,7 @@ class Board:
                             self._collision_timer.get((other, agent), 0) == 0):
                         self._collided.append((agent, other))
 
-                        distance = Math.distance(agent.rect.center, other.rect.center)
-                        timeout = math.ceil((distance / agent.velocity_norm + distance / other.velocity_norm) * 1000.0)
+                        timeout = self._collision_timeout(agent, other)
 
                         self._collision_timer[(agent, other)] = timeout
                         self._collision_timer[(other, agent)] = timeout

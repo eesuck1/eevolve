@@ -1,6 +1,6 @@
 import math
 import sys
-from typing import Sequence
+from typing import Sequence, Callable, Any
 
 import numpy
 import pygame
@@ -29,7 +29,8 @@ class Game:
                  draw_time: bool = True,
                  reset_on: bool = True,
                  draw_velocities: bool = False,
-                 fps_limit: int = 300):
+                 fps_limit: int = 300,
+                 collision_timeout: Callable[[Agent | Any, Agent | Any], int] | int | float = None):
         self._task_priorities = LOWEST_TASK_PRIORITY - HIGHEST_TASK_PRIORITY + 1
 
         self._display = pygame.Surface(display_size)
@@ -51,7 +52,7 @@ class Game:
         self._board = Board(
             (math.ceil(self.display_size[0] / board_sectors_number),
              math.ceil(self.display_size[1] / board_sectors_number)),
-            board_sectors_number)
+            board_sectors_number, collision_timeout)
         self._sectors_number = board_sectors_number
         self._sector_rects = []
         self._sector_colors = []

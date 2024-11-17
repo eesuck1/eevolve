@@ -11,7 +11,7 @@ class Simulation:
 
     def __init__(self, agents_number: int) -> None:
         self._game = eevolve.Game(self.WINDOW_SIZE, self.WINDOW_SIZE,
-                                  self.WINDOW_CAPTION, self.WINDOW_BACKGROUND, 3)
+                                  self.WINDOW_CAPTION, self.WINDOW_BACKGROUND, 10, collision_timeout=500)
         self._agents_number = agents_number
 
     @staticmethod
@@ -24,12 +24,8 @@ class Simulation:
 
         force = (agent_1.mass * agent_2.mass) / eevolve.Math.distance(agent_1, agent_2) ** 2
 
-        agent_1.accelerate_toward(agent_2, force * dt)
-        agent_2.accelerate_toward(agent_1, force * dt)
-
-    @staticmethod
-    def init_mass_handler(agent: SpaceAgent) -> None:
-        agent.mass = numpy.pi * agent.rect.width ** 2 / 4
+        agent_1.accelerate_toward(agent_2, force / agent_2.mass * dt)
+        agent_2.accelerate_toward(agent_1, force / agent_1.mass * dt)
 
     @staticmethod
     def board_handler(agent: eevolve.Agent) -> None:
@@ -70,14 +66,13 @@ class Simulation:
                                      priority=eevolve.HIGHEST_TASK_PRIORITY + 2),
             eevolve.BorderCollisionTask(self.board_handler, 0, priority=eevolve.HIGHEST_TASK_PRIORITY + 2),
             eevolve.CollisionTask(self.collision_handler, 0),
-            eevolve.AgentTask(self.init_mass_handler, 0, execution_number=1),
         )
 
         agent = SpaceAgent(0.0, agent_surface="examples/space/assets/star.png")
         agent_generators = {
             "size": eevolve.NumbersGenerator.hypercube_generator(self._agents_number, 2, 10.0, 25.0, dtype=int),
             "velocity": eevolve.NumbersGenerator.normal_generator(self._agents_number, shape=(2,), offset=0.0,
-                                                                  scaler=5.0),
+                                                                  scaler=100.0),
         }
 
         self._game.add_tasks(tasks)
