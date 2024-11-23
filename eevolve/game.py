@@ -78,6 +78,7 @@ class Game:
         self.add_task(FrameEndTask(self._timer, priority=HIGHEST_TASK_PRIORITY))
         self.add_task(FrameEndTask(self._board_task_handler, priority=HIGHEST_TASK_PRIORITY))
         self.add_task(FrameEndTask(self._check_dead, priority=LOWEST_TASK_PRIORITY))
+        self.add_task(FrameEndTask(self._agents_reproduce, priority=LOWEST_TASK_PRIORITY))
         self.add_task(FrameEndTask(self._draw, priority=LOWEST_TASK_PRIORITY))
         self.add_task(FrameEndTask(self._update_display, priority=LOWEST_TASK_PRIORITY))
 
@@ -193,6 +194,13 @@ class Game:
         self._delta_time_ms = self._clock.get_time()
         self._delta_time = self._delta_time_ms / 1000.0
         self._time += self._delta_time_ms
+
+    def _agents_reproduce(self) -> None:
+        for agent in filter(lambda x: len(x.children) > 0, self._board.agents):
+            for child in agent.children:
+                self.add_agent(child)
+
+            agent.children.clear()
 
     def run(self) -> None:
         self._init_internal_tasks()

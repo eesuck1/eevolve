@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Any, Sequence, Union, List
+from typing import Any, Sequence, Union, List, Callable
 
 import numpy
 import pygame
@@ -14,7 +14,7 @@ class Agent:
     def __init__(self, agent_size: tuple[int | float, int | float] | numpy.ndarray = (0, 0),
                  agent_position: tuple[int | float, int | float] | numpy.ndarray = (0, 0),
                  agent_name: str = "", agent_surface: str | pygame.Surface | numpy.ndarray = pygame.Surface((0, 0)),
-                 brain: Brain = None):
+                 brain: Brain = None, reproduce_threshold: float | int = 1, reproduce_count: int = 1, reproduce_function: Callable[["Agent"], "Agent"] = None):
         """
         Initializes a new agent.
 
@@ -42,6 +42,12 @@ class Agent:
         self._is_colliding_border = False
         self._colliding: Union["Agent", None, Any] = None
         self._colliding_directions = []
+
+        self._reproduce_metric = 0
+        self._reproduce_threshold = reproduce_threshold
+        self._reproduce_count = reproduce_count
+        self._reproduce_function = reproduce_function if reproduce_function is not None else self._default_reproduce
+        self._children: list["Agent"] = []
 
         self._velocity = numpy.zeros((2,), dtype=float)
 
@@ -172,6 +178,23 @@ class Agent:
         self._velocity[0] = 0.0
         self._velocity[1] = 0.0
 
+    def reproduce(self) -> None:
+        if self._reproduce_metric < self._reproduce_threshold:
+            return
+
+        for index in range(self._reproduce_count):
+            self._children.append(self._reproduce_function(self))
+
+        self._reproduce_metric = 0.0
+
+    @staticmethod
+    def _default_reproduce(parent: Union["Agent", Any]) -> Union["Agent", Any]:
+        child = deepcopy(parent)
+        child.brain.mutate()
+        child.name += "Child"
+
+        return child
+
     @property
     def position(self) -> tuple[int | float, int | float]:
         return self._rect.topleft
@@ -252,6 +275,18 @@ class Agent:
     @colliding.setter
     def colliding(self, value: Union["Agent", None, Any]) -> None:
         self._colliding = value
+
+    @property
+    def reproduce_metric(self) -> float | int:
+        return self._reproduce_metric
+
+    @reproduce_metric.setter
+    def reproduce_metric(self, value: float | int):
+        self._reproduce_metric = value
+
+    @property
+    def children(self) -> list[Union["Agent", Any]]:
+        return self._children
 
     def __str__(self) -> str:
         return f"<{self._agent_name}: ({self.position[0]}, {self.position[1]})>"
