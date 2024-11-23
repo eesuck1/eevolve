@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Any, Sequence, Union
+from typing import Any, Sequence, Union, List
 
 import numpy
 import pygame
@@ -168,6 +168,10 @@ class Agent:
 
         return new_agent
 
+    def stop(self) -> None:
+        self._velocity[0] = 0.0
+        self._velocity[1] = 0.0
+
     @property
     def position(self) -> tuple[int | float, int | float]:
         return self._rect.topleft
@@ -234,7 +238,7 @@ class Agent:
         self._is_colliding_border = value
 
     @property
-    def collision_directions(self) -> list[int, ...]:
+    def collision_directions(self) -> list[Any]:
         return self._colliding_directions
 
     @collision_directions.setter

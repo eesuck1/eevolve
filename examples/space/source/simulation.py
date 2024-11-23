@@ -10,8 +10,8 @@ class Simulation:
     WINDOW_BACKGROUND = numpy.full((*WINDOW_SIZE, 3), (123, 123, 123), dtype=numpy.uint8)
 
     def __init__(self, agents_number: int) -> None:
-        self._game = eevolve.Game(self.WINDOW_SIZE, self.WINDOW_SIZE,
-                                  self.WINDOW_CAPTION, self.WINDOW_BACKGROUND, 10, collision_timeout=500)
+        self._game = eevolve.Game(self.WINDOW_SIZE, self.WINDOW_SIZE, self.WINDOW_CAPTION, self.WINDOW_BACKGROUND, 10,
+                                  collision_timeout=500)
         self._agents_number = agents_number
 
     @staticmethod

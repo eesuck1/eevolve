@@ -13,8 +13,8 @@ from examples.war.source.constants import *
 
 class Simulation:
     def __init__(self, field_size: int) -> None:
-        self._game = eevolve.Game(DISPLAY_SIZE, SCREEN_SIZE, WINDOW_NAME,
-                                  os.path.join(ASSETS_PATH, "bg.png"), SECTORS_NUMBER)
+        self._game = eevolve.Game(DISPLAY_SIZE, SCREEN_SIZE, WINDOW_NAME, os.path.join(ASSETS_PATH, "bg.png"),
+                                  SECTORS_NUMBER)
 
         self._field_size = field_size
         self._mapping = [(i, j) for i in range(-1, 2) for j in range(-1, 2)]

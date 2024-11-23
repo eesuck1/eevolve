@@ -26,10 +26,10 @@ class Game:
                  display_background: str | pygame.Surface | numpy.ndarray,
                  board_sectors_number: int,
                  draw_sectors: bool = False,
-                 draw_time: bool = True,
+                 draw_info: bool = True,
                  reset_on: bool = True,
                  draw_velocities: bool = False,
-                 fps_limit: int = 300,
+                 fps_limit: int = 60,
                  collision_timeout: Callable[[Agent | Any, Agent | Any], int] | int | float = None):
         self._task_priorities = LOWEST_TASK_PRIORITY - HIGHEST_TASK_PRIORITY + 1
 
@@ -58,11 +58,12 @@ class Game:
         self._sector_colors = []
 
         self._to_draw_sectors = draw_sectors
-        self._to_draw_time = draw_time
+        self._to_draw_info = draw_info
         self._to_draw_velocities = draw_velocities
 
         self._font = pygame.font.SysFont(DEFAULT_FONT, screen_size[0] // DEFAULT_FONT_SCALE_FACTOR)
-        self._font_position = (screen_size[0] // DEFAULT_FONT_SCALE_FACTOR, screen_size[1] // DEFAULT_FONT_SCALE_FACTOR)
+        self._timer_position = (screen_size[0] // DEFAULT_FONT_SCALE_FACTOR, screen_size[1] // DEFAULT_FONT_SCALE_FACTOR)
+        self._fps_position = (screen_size[0] // DEFAULT_FONT_SCALE_FACTOR, screen_size[1] // DEFAULT_FONT_SCALE_FACTOR * 3)
 
         self._game_running = True
         self._blit_function = None
@@ -177,10 +178,13 @@ class Game:
     def _update_display(self) -> None:
         self._blit_function()
 
-        if self._to_draw_time:
+        if self._to_draw_info:
             self._screen.blit(
                 self._font.render(f"time: {self._time / 1000}", False, DEFAULT_FONT_COLOR),
-                self._font_position)
+                self._timer_position)
+            self._screen.blit(
+                self._font.render(f"fps: {math.floor(self._clock.get_fps())}", False, DEFAULT_FONT_COLOR),
+                self._fps_position)
 
         self._clock.tick(self._fps_limit)
         pygame.display.update()

@@ -6,7 +6,7 @@ import numpy
 class NumbersGenerator:
     @staticmethod
     def uniform(shape: tuple[int, ...] = (), offset: float = 0.0, scaler: float = 1.0,
-                dtype: Any = numpy.float64) -> numpy.ndarray:
+                dtype: Any = numpy.float64) -> numpy.ndarray | float:
         return dtype(scaler * numpy.random.rand(*shape) + offset)
 
     @staticmethod
@@ -22,7 +22,7 @@ class NumbersGenerator:
             yield numpy.full((dimensions,), NumbersGenerator.uniform(offset=offset, scaler=scaler), dtype=dtype)
 
     @staticmethod
-    def normal(shape: tuple[int, ...] = (), offset: float = 0.0, scaler: float = 1.0) -> numpy.ndarray:
+    def normal(shape: tuple[int, ...] = (), offset: float = 0.0, scaler: float = 1.0) -> numpy.ndarray | float:
         return scaler * numpy.random.randn(*shape) + offset
 
     @staticmethod
