@@ -1,8 +1,7 @@
 from .brain import Brain
 from .agent import Agent
 from .board import Board
-from .task import (Task, CollisionTask, BoardTask, AgentTask, FrameEndTask, PairTask, BorderCollisionTask,
-                   AgentMovementTask, PairMovementTask)
+from .task import Task, CollisionTask, AgentTask, FrameEndTask, PairTask, BorderCollisionTask, AroundAgentTask
 from .game import Game
 from .generator import PositionGenerator, AgentGenerator, ColorGenerator
 from .numbers import NumbersGenerator

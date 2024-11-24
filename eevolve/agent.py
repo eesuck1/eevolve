@@ -47,11 +47,13 @@ class Agent:
         self._reproduce_threshold = reproduce_threshold
         self._reproduce_count = reproduce_count
         self._reproduce_function = reproduce_function if reproduce_function is not None else self._default_reproduce
+        self._reproduced = False
         self._children: list["Agent"] = []
 
         self._velocity = numpy.zeros((2,), dtype=float)
 
-    def accelerate_by(self, delta: tuple[int | float, int | float] | numpy.ndarray) -> None:
+    def accelerate_by(self, delta: tuple[int | float, int | float] | numpy.ndarray,
+                      velocity_bounds: tuple[float, float] = (float("-inf"), float("inf"))) -> None:
         """
         Change Agent position by given delta within specified bounds with respect to current position.
 
@@ -59,11 +61,14 @@ class Agent:
 
         agent.move_by((5, 5), (0, 0), game.display_size)
 
+        :param velocity_bounds:
         :param delta: Delta X and Y which will be added to current Agent position.
         :return: None
         """
         delta = delta if isinstance(delta, numpy.ndarray) else numpy.array(delta)
+
         self._velocity += delta
+        self._velocity = numpy.clip(self._velocity, velocity_bounds[0], velocity_bounds[1])
 
     def move_to(self, position: tuple[int | float, int | float] | numpy.ndarray) -> None:
         """
@@ -163,14 +168,19 @@ class Agent:
         self._is_dead = True
 
     def new_like_me(self) -> "Agent":
-        new_agent = type(self)(self._agent_size, self.position, self._agent_name,
-                               deepcopy(self._agent_surface), self._brain.new_like_me())
+        new_agent = type(self)(agent_size=self._agent_size, agent_position=self.position, agent_name=self._agent_name,
+                               agent_surface=deepcopy(self._agent_surface), brain=self._brain.new_like_me(),
+                               reproduce_threshold=self._reproduce_threshold, reproduce_count=self._reproduce_count,
+                               reproduce_function=self._reproduce_function)
 
         for attribute, value in self.__dict__.items():
             if attribute.startswith("__"):
                 continue
 
-            setattr(new_agent, attribute, deepcopy(value))
+            if hasattr(value, "new_like_me"):
+                setattr(new_agent, attribute, value.new_like_me())
+            else:
+                setattr(new_agent, attribute, deepcopy(value))
 
         return new_agent
 
@@ -179,19 +189,21 @@ class Agent:
         self._velocity[1] = 0.0
 
     def reproduce(self) -> None:
-        if self._reproduce_metric < self._reproduce_threshold:
+        if self._reproduce_metric < self._reproduce_threshold or self._reproduced:
             return
+
+        self._reproduce_metric = 0.0
 
         for index in range(self._reproduce_count):
             self._children.append(self._reproduce_function(self))
 
-        self._reproduce_metric = 0.0
+        self._reproduced = True
+
 
     @staticmethod
     def _default_reproduce(parent: Union["Agent", Any]) -> Union["Agent", Any]:
         child = deepcopy(parent)
         child.brain.mutate()
-        child.name += "Child"
 
         return child
 

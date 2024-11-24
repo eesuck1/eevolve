@@ -37,7 +37,7 @@ class Brain:
         self._output = output_function(self._output)
 
     def decide(self) -> Any:
-        if self._mapping is None or not self._mapping:
+        if self._mapping is None:
             return None
 
         if isinstance(self._mapping, (list, tuple, numpy.ndarray)):

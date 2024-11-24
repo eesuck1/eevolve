@@ -38,7 +38,7 @@ class Simulation:
             agent.velocity[1] *= y
 
     @staticmethod
-    def collision_handler(pair: tuple[SpaceAgent, SpaceAgent]) -> None:
+    def collision_handler(pair: tuple[SpaceAgent, SpaceAgent], _dt: float) -> None:
         agent_1, agent_2 = pair
 
         c_1 = numpy.array(agent_1.rect.center)
@@ -60,9 +60,9 @@ class Simulation:
 
     def run(self) -> None:
         tasks = (
-            eevolve.AgentMovementTask(self.init_movement_handler, 0, execution_number=1,
+            eevolve.AgentTask(self.init_movement_handler, 0, execution_number=1,
                                       priority=eevolve.HIGHEST_TASK_PRIORITY + 2),
-            eevolve.PairMovementTask(self.movement_handler, 0,
+            eevolve.PairTask(self.movement_handler, 0,
                                      priority=eevolve.HIGHEST_TASK_PRIORITY + 2),
             eevolve.BorderCollisionTask(self.board_handler, 0, priority=eevolve.HIGHEST_TASK_PRIORITY + 2),
             eevolve.CollisionTask(self.collision_handler, 0),

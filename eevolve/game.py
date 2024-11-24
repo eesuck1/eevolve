@@ -1,6 +1,6 @@
 import math
 import sys
-from typing import Sequence, Callable, Any
+from typing import Sequence, Callable, Any, Literal
 
 import numpy
 import pygame
@@ -8,8 +8,7 @@ import pygame
 from eevolve.agent import Agent
 from eevolve.board import Board
 from eevolve.generator import PositionGenerator, ColorGenerator
-from eevolve.task import Task, FrameEndTask, CollisionTask, AgentTask, BoardTask, PairTask, BorderCollisionTask, \
-    AgentMovementTask, PairMovementTask
+from eevolve.task import Task, FrameEndTask, CollisionTask, AgentTask, PairTask, BorderCollisionTask, AroundAgentTask
 from eevolve.loader import Loader
 from eevolve.constants import TOP_LEFT, LOWEST_TASK_PRIORITY, HIGHEST_TASK_PRIORITY, DEFAULT_FONT, \
     DEFAULT_FONT_SCALE_FACTOR, DEFAULT_FONT_COLOR, RED_COLOR
@@ -30,7 +29,8 @@ class Game:
                  reset_on: bool = True,
                  draw_velocities: bool = False,
                  fps_limit: int = 60,
-                 collision_timeout: Callable[[Agent | Any, Agent | Any], int] | int | float = None):
+                 collision_timeout: Callable[[Agent | Any, Agent | Any], int] | int | float = None,
+                 board_checks: Sequence[Literal["collision", "sector_pair", "around_agent"]] = ("collision", "sector_pair", "around_agent")):
         self._task_priorities = LOWEST_TASK_PRIORITY - HIGHEST_TASK_PRIORITY + 1
 
         self._display = pygame.Surface(display_size)
@@ -40,6 +40,7 @@ class Game:
         self._display_size = display_size
         self._screen_size = screen_size
         self._window_caption = window_caption
+        self._board_checks = board_checks
 
         self._agents_list = []
         self._tasks: list[list[Task]] = [[] for _ in range(self._task_priorities)]
@@ -96,8 +97,13 @@ class Game:
     def _board_task_handler(self) -> None:
         self._board.decrease_timeout(self._delta_time_ms)
         self._board.move_agents(self._delta_time)
-        self._board.check_collision()
-        self._board.check_sector_pairs()
+
+        if "collision" in self._board_checks:
+            self._board.check_collision()
+        if "sector_pair" in self._board_checks:
+            self._board.check_sector_pairs()
+        if "around_agent" in self._board_checks:
+            self._board.scan_around_agents()
 
     def _do_tasks(self) -> None:
         to_remove = []
@@ -110,34 +116,27 @@ class Game:
 
                     if isinstance(task, CollisionTask):
                         for collision_pair in self._board.collided:
-                            task(collision_pair)
+                            task(collision_pair, task.timer_seconds)
                     elif isinstance(task, AgentTask):
                         for agent in self._board.agents:
-                            task(agent)
-                    elif isinstance(task, AgentMovementTask):
-                        for agent in self._board.agents:
                             task(agent, task.timer_seconds)
-                    elif isinstance(task, PairMovementTask):
+                    elif isinstance(task, PairTask):
                         for pair in self._board.sector_pairs:
                             task(pair, task.timer_seconds)
                     elif isinstance(task, BorderCollisionTask):
                         for agent in filter(lambda x: x.colliding_border, self._board.agents):
                             task(agent)
-                    elif isinstance(task, BoardTask):
-                        task(self._board)
-                    elif isinstance(task, PairTask):
-                        for pair in self._board.sector_pairs:
-                            task(pair, task.timer_seconds)
+                    elif isinstance(task, AroundAgentTask):
+                        for agent, around in self._board.agents.items():
+                            task(agent, around, task.timer_seconds)
                     elif isinstance(task, FrameEndTask):
                         task()
                     else:
                         task()
-                else:
-                    continue
 
-                if task.is_dead:
-                    to_remove.append(task)
-                task.timer = 0
+                    if task.is_dead:
+                        to_remove.append(task)
+                    task.timer = 0
 
         self.remove_tasks(to_remove)
 
@@ -196,11 +195,14 @@ class Game:
         self._time += self._delta_time_ms
 
     def _agents_reproduce(self) -> None:
-        for agent in filter(lambda x: len(x.children) > 0, self._board.agents):
-            for child in agent.children:
-                self.add_agent(child)
+        to_add = []
 
+        for agent in filter(lambda x: len(x.children) > 0 and not x.is_dead, self._board.agents):
+            to_add.extend(agent.children)
             agent.children.clear()
+
+        for child in to_add:
+            self.add_agent(child)
 
     def run(self) -> None:
         self._init_internal_tasks()

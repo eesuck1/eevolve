@@ -114,8 +114,11 @@ class Dense(Layer):
         return new_layer
 
     def __call__(self, sample: numpy.ndarray) -> numpy.ndarray:
-        if len(sample.shape) != 2:
-            raise ValueError(f"Expected `shape` length for `sample` is 2. {len(sample.shape)} given instead.")
+        if len(sample.shape) > 2:
+            raise ValueError(f"Expected `shape` length for `sample` must be greater than 2. {len(sample.shape)} given instead.")
+        elif len(sample.shape) == 1:
+            sample = numpy.expand_dims(sample, axis=0)
+
         return self._activation(sample.dot(self._weights) + self._bias)
 
 

@@ -1,7 +1,8 @@
 from typing import Callable, Any
 
+from numpy.random.mtrand import Sequence
+
 from eevolve.agent import Agent
-from eevolve.board import Board
 from eevolve.constants import HIGHEST_TASK_PRIORITY, LOWEST_TASK_PRIORITY
 
 
@@ -31,7 +32,7 @@ class Task:
     def collision_task_handler(collision_pair: tuple[Agent | Any, Agent | Any]) -> None:
         agent_1, agent_2 = collision_pair
 
-        print(f"{agent_1} collide {agent_2}")
+        print(f'{agent_1} collide {agent_2}')
 
     game_task = Task(game_task, 1000, game)
 
@@ -129,19 +130,13 @@ class Task:
 
 
 class CollisionTask(Task):
-    def __init__(self, function: Callable[[tuple[Agent | Any, Agent | Any]], None], period_ms: int,
+    def __init__(self, function: Callable[[tuple[Agent | Any, Agent | Any], float], None], period_ms: int,
                  execution_number: int = -1,
                  priority: int = HIGHEST_TASK_PRIORITY, *args, **kwargs) -> None:
         super().__init__(function, period_ms, execution_number, priority, *args, **kwargs)
 
 
 class AgentTask(Task):
-    def __init__(self, function: Callable[[Agent | Any], None], period_ms: int, execution_number: int = -1,
-                 priority: int = HIGHEST_TASK_PRIORITY, *args, **kwargs):
-        super().__init__(function, period_ms, execution_number, priority, *args, **kwargs)
-
-
-class AgentMovementTask(Task):
     def __init__(self, function: Callable[[Agent | Any, float], Any], period_ms: int, execution_number: int = -1,
                  priority: int = HIGHEST_TASK_PRIORITY, *args, **kwargs):
         super().__init__(function, period_ms, execution_number, priority, *args, **kwargs)
@@ -153,20 +148,7 @@ class FrameEndTask(Task):
         super().__init__(function, 0, execution_number, priority, *args, **kwargs)
 
 
-class BoardTask(Task):
-    def __init__(self, function: Callable[[Board], None], period_ms: int, execution_number: int = -1,
-                 priority: int = HIGHEST_TASK_PRIORITY, *args, **kwargs):
-        super().__init__(function, period_ms, execution_number, priority, *args, **kwargs)
-
-
 class PairTask(Task):
-    def __init__(self, function: Callable[[tuple[Agent | Any, Agent | Any], float], None], period_ms: int,
-                 execution_number: int = -1,
-                 priority: int = HIGHEST_TASK_PRIORITY, *args, **kwargs):
-        super().__init__(function, period_ms, execution_number, priority, *args, **kwargs)
-
-
-class PairMovementTask(Task):
     def __init__(self, function: Callable[[tuple[Agent | Any, Agent | Any], float], None], period_ms: int,
                  execution_number: int = -1,
                  priority: int = HIGHEST_TASK_PRIORITY, *args, **kwargs):
@@ -175,5 +157,10 @@ class PairMovementTask(Task):
 
 class BorderCollisionTask(Task):
     def __init__(self, function: Callable[[Agent | Any], None], period_ms: int, execution_number: int = -1,
+                 priority: int = HIGHEST_TASK_PRIORITY, *args, **kwargs):
+        super().__init__(function, period_ms, execution_number, priority, *args, **kwargs)
+
+class AroundAgentTask(Task):
+    def __init__(self, function: Callable[[Agent | Any, Sequence[Agent | Any], float], Any], period_ms: int, execution_number: int = -1,
                  priority: int = HIGHEST_TASK_PRIORITY, *args, **kwargs):
         super().__init__(function, period_ms, execution_number, priority, *args, **kwargs)

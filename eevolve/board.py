@@ -1,10 +1,8 @@
 import math
-
 from itertools import combinations, chain
 from typing import Any, Sequence, Callable
 
 from eevolve.agent import Agent
-from eevolve.eemath import Math
 
 
 class Board:
@@ -139,65 +137,30 @@ class Board:
             if agent.is_dead:
                 self._dead_agents.append(agent)
 
-    def scan_around_agent(self, agent: Agent, radius: int = 0, hold_previous: bool = False) -> None:
+    def scan_around_agents(self, radius: int = 0, hold_previous: bool = False) -> None:
         if radius < 0:
             raise ValueError(f"Radius must be a non-negative integer. {radius} given instead!")
-        if agent not in self._agents:
-            return
 
-        x_i, y_i = agent.sector_index
+        for agent, other in self._agents.items():
+            x_i, y_i = agent.sector_index
 
-        agents = self._agents[agent]
+            if not hold_previous:
+                other.clear()
 
-        if not hold_previous:
-            agents.clear()
+            if radius:
+                x_min = max(x_i - radius, 0)
+                x_max = min(x_i + radius, self._sectors_number)
+                y_min = max(y_i - radius, 0)
+                y_max = min(y_i + radius, self._sectors_number)
 
-        if radius:
-            x_min = max(x_i - radius, 0)
-            x_max = min(x_i + radius, self._sectors_number)
-            y_min = max(y_i - radius, 0)
-            y_max = min(y_i + radius, self._sectors_number)
+                other.extend(chain(*[self._board[i][j]
+                                    for i in range(x_min, x_max)
+                                    for j in range(y_min, y_max)]))
+            else:
+                other.extend(self._board[x_i][y_i])
 
-            for i in range(x_min, x_max):
-                for j in range(y_min, y_max):
-                    agents.extend(self._board[i][j])
-        else:
-            agents.extend(self._board[x_i][y_i])
-
-        if agent in agents:
-            agents.remove(agent)
-
-    def scan_distances_around_agent(self, agent: Agent, radius: int = 0, hold_previous: bool = False) -> None:
-        if radius < 0:
-            raise ValueError(f"Radius must be a non-negative integer. {radius} given instead!")
-        if agent not in self._agents:
-            return
-
-        x_i, y_i = agent.sector_index
-
-        if radius:
-            x_min = max(x_i - radius, 0)
-            x_max = min(x_i + radius, self._sectors_number)
-            y_min = max(y_i - radius, 0)
-            y_max = min(y_i + radius, self._sectors_number)
-
-            distances = [
-                Math.distance(agent, other)
-                for i in range(x_min, x_max)
-                for j in range(y_min, y_max)
-                for other in self._board[i][j]
-                if other is not agent
-            ]
-        else:
-            distances = [Math.distance(agent, other)
-                         for other in self._board[x_i][y_i]
-                         if other is not agent]
-
-        agents = self._agents[agent]
-
-        if not hold_previous:
-            agents.clear()
-        agents.extend(distances)
+            if agent in other:
+                other.remove(agent)
 
     def __str__(self) -> str:
         self.__string = ""
